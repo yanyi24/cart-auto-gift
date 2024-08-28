@@ -3,7 +3,7 @@
 client_id = "ebe06dfd29d1a471cf52210f18501ec7"
 name = "Cart Auto Gift"
 handle = "cart-auto-gift"
-application_url = "https://payroll-postal-adventure-msg.trycloudflare.com"
+application_url = "https://intervals-require-browsers-follows.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://payroll-postal-adventure-msg.trycloudflare.com/auth/callback",
-  "https://payroll-postal-adventure-msg.trycloudflare.com/auth/shopify/callback",
-  "https://payroll-postal-adventure-msg.trycloudflare.com/api/auth/callback"
+  "https://intervals-require-browsers-follows.trycloudflare.com/auth/callback",
+  "https://intervals-require-browsers-follows.trycloudflare.com/auth/shopify/callback",
+  "https://intervals-require-browsers-follows.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
