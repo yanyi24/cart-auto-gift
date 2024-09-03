@@ -8,23 +8,19 @@ import { authenticate } from "../shopify.server";
 import {useState} from "react";
 import {useI18n} from "@shopify/react-i18n";
 import en from '../locales/en.json';
-import zhCN from '../locales/zh-CN.json';
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
-
   return null;
 };
 
-
-
 export default function Index() {
-  const [i18n, ShareTranslations] = useI18n({
-    id: 'greeting',
+  const [i18n] = useI18n({
+    id: 'Common',
     fallback: en,
-    translations: {
-      en,
-      'zh-CN': zhCN
+    translations: function (locale) {
+      const localeStr = locale.startsWith('en') ? 'en' : locale;
+      return import (`../locales/${localeStr}.json`);
     }
   });
 
@@ -41,23 +37,16 @@ export default function Index() {
       setSelectedProducts(products);
     }
   }
-
-
-
   return (
-
     <Page>
-      <TitleBar title="Remix app template">
-
-      </TitleBar>
+      <TitleBar title={i18n.translate('Common.greeting')} />
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>
             <Card>
               <BlockStack gap="500">
                 <InlineStack align="space-between">
-                  <Text as={"h2"} variant="headingLg">
-                   Products {i18n.translate('greeting')}
+                  <Text as={"h2"} variant="headingLg">Products {i18n.translate('Common.greeting')}
                   </Text>
                   {selectedProducts.length > 0 && (
                     <Button variant="plain" onClick={selectProduct}>

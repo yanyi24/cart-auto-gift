@@ -1,3 +1,5 @@
 {
-  "greeting": "你好"
+  "Common": {
+    "greeting": "你好2"
+  }
 }

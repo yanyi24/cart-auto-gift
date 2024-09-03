@@ -1,3 +1,5 @@
 {
-  "greeting": "Hello"
+  "Common": {
+    "greeting": "Hello"
+  }
 }

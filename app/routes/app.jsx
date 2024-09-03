@@ -8,14 +8,10 @@ import { authenticate } from "../shopify.server";
 import {I18nManager, I18nContext} from "@shopify/react-i18n";
 import {useEffect, useState} from "react";
 
-
-
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
-
-
   return json({ apiKey: process.env.SHOPIFY_API_KEY || "" });
 };
 
@@ -25,9 +21,7 @@ export default function App() {
   const [locale, setLocale] = useState('en');
 
   useEffect(() => {
-    console.log(app.config.locale)
     setLocale(app.config.locale);
-
   }, [app]);
 
   const i18nManager = new I18nManager({
