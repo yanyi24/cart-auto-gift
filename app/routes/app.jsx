@@ -7,6 +7,7 @@ import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
 import {I18nManager, I18nContext} from "@shopify/react-i18n";
 import {useEffect, useState} from "react";
+import {DiscountProvider} from "../components/DiscountProvider.jsx";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
@@ -33,13 +34,15 @@ export default function App() {
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <I18nContext.Provider value={i18nManager}>
-        <NavMenu>
-          <Link to="/app" rel="home">
-            Home
-          </Link>
-          <Link to="/app/additional">Additional page</Link>
-        </NavMenu>
-        <Outlet />
+        <DiscountProvider>
+          <ui-nav-menu>
+            <Link to="/app" rel="home">
+              Home
+            </Link>
+            <Link to="/app/additional">Additional page</Link>
+          </ui-nav-menu>
+          <Outlet />
+        </DiscountProvider>
       </I18nContext.Provider>
     </AppProvider>
   );

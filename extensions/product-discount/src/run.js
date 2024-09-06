@@ -19,8 +19,44 @@ const EMPTY_DISCOUNT = {
  * @returns {FunctionRunResult}
  */
 export function run(input) {
-  const targets = input.cart.lines;
-  console.log("targets", targets)
+  /**
+   * @type {{
+   *   quantity: number
+   *   percentage: number
+   * }}
+   */
+  const configuration = JSON.parse(
+    input?.discountNode?.metafield?.value ?? "{}",
+  );
+  if (!configuration.quantity || !configuration.percentage) {
+    return EMPTY_DISCOUNT;
+  }
 
-  return EMPTY_DISCOUNT;
+  const targets = input.cart.lines
+    .filter((line) => line.quantity >= configuration.quantity)
+    .map((line) => {
+      return /** @type {Target} */ ({
+        cartLine: {
+          id: line.id,
+        },
+      });
+    });
+
+  if (!targets.length) {
+    console.error("No cart lines qualify for volume discount.");
+    return EMPTY_DISCOUNT;
+  }
+  return {
+    discounts: [
+      {
+        targets,
+        value: {
+          percentage: {
+            value: configuration.percentage.toString(),
+          },
+        },
+      },
+    ],
+    discountApplicationStrategy: DiscountApplicationStrategy.First,
+  };
 }

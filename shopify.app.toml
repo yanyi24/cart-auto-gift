@@ -3,7 +3,7 @@
 client_id = "ebe06dfd29d1a471cf52210f18501ec7"
 name = "Cart Auto Gift"
 handle = "cart-auto-gift"
-application_url = "https://usual-washing-invited-anger.trycloudflare.com"
+application_url = "https://sciences-reaches-marble-archived.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,read_products,read_shipping,write_discounts,write_products"
+scopes = "read_customers,read_products,read_shipping,write_discounts,write_discounts_allocator_functions,write_products"
 
 [auth]
 redirect_urls = [
-  "https://usual-washing-invited-anger.trycloudflare.com/auth/callback",
-  "https://usual-washing-invited-anger.trycloudflare.com/auth/shopify/callback",
-  "https://usual-washing-invited-anger.trycloudflare.com/api/auth/callback"
+  "https://sciences-reaches-marble-archived.trycloudflare.com/auth/callback",
+  "https://sciences-reaches-marble-archived.trycloudflare.com/auth/shopify/callback",
+  "https://sciences-reaches-marble-archived.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

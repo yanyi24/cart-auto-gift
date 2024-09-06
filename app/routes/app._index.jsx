@@ -38,7 +38,12 @@ export default function Index() {
     }
   }
   return (
-    <Page>
+    <Page
+      primaryAction={{
+        content: 'Discounts',
+        url: '/app/discounts'
+      }}
+    >
       <TitleBar title={i18n.translate('Common.greeting')} />
       <BlockStack gap="500">
         <Layout>
