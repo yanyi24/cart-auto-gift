@@ -12,10 +12,9 @@ import {
 import {json} from "@remix-run/node";
 import {useLoaderData} from "@remix-run/react";
 import {useCallback, useState} from "react";
-import {ImageIcon, XSmallIcon} from "@shopify/polaris-icons";
+import {DeleteIcon, ImageIcon, PlusIcon, XSmallIcon} from "@shopify/polaris-icons";
 import {useI18n} from "@shopify/react-i18n";
 import shopify from "../shopify.server.js";
-import * as PropTypes from "prop-types";
 import CurrencySymbol from "../components/CurrencySymbol.jsx";
 
 export  const loader = async ({params, request}) => {
@@ -53,19 +52,65 @@ export default function Discount() {
   const handleBuyTypeChange = useCallback((value) => setBuyType(value),[]);
 
   const [triggerCondition, setTriggerCondition] = useState('QUANTITY');
-  const [triggerConditionValue, setTriggerConditionValue] = useState();
   const handleConditionChange = useCallback(
     (_, newValue) => setTriggerCondition(newValue),
     [],
   );
   const handleChangeTriggerConditionValue = useCallback(
-    (newValue) => setTriggerConditionValue(newValue),
-    [],
+    (idx, newValue, type) => {
+      setConditions((prevConditions) => {
+        return prevConditions.map((condition, index) => {
+          if (index === idx) {
+            return {
+              ...condition,
+              [type]: newValue,
+            };
+          }
+          return condition;
+        });
+      });
+    },
+    []
   );
+
 
   const [selectedBuysProducts, setSelectedBuysProducts] = useState([]);
   const [selectedBuysCollections, setSelectedBuysCollections] = useState([]);
 
+  const [conditions, setConditions] = useState([{
+    quantity: null,
+    amount: null,
+    products: []
+  }]);
+
+  function handleDeleteGets(index) {
+    setConditions((prevConditions) => {
+      return prevConditions.filter((_, i) => i !== index);
+    })
+  }
+  async function handleSelectGets(idx) {
+    const selectionIds = conditions[idx].products;
+    const data = await window.shopify.resourcePicker({
+      type: 'product',
+      action: 'add',
+      multiple: true,
+      selectionIds
+    });
+
+    if (data.length) {
+      setConditions((prevConditions) => {
+        return prevConditions.map((condition, index) => {
+          if (index === idx) {
+            return {
+              ...condition,
+              products: data
+            };
+          }
+          return condition;
+        });
+      });
+    }
+  }
   async function handleSelectBuys() {
     const isCollection = buyType === 'COLLECTIONS';
     const type = isCollection ? 'collection' : 'product';
@@ -101,6 +146,14 @@ export default function Discount() {
     }
   }
 
+  function addCondition() {
+    if (conditions.find(c => c.products.length === 0)) return;
+    setConditions((prevConditions) => [...prevConditions, {
+      quantity: null,
+      amount: null,
+      products: []
+    }]);
+  }
   const SelectedTargets = ({products, collections}) => {
     const ProductItem = ({product, isLast}) => {
       const {totalVariants, variants, title, hasOnlyDefaultVariant, images, id} = product;
@@ -194,6 +247,68 @@ export default function Discount() {
       </>
     )
   }
+  const SelectedGets = ({products, index}) => {
+    const ProductItem = ({product, isLast}) => {
+      const {totalVariants, variants, title, hasOnlyDefaultVariant, images, id} = product;
+      const tips = hasOnlyDefaultVariant ?
+        i18n.formatCurrency(variants[0].price, {currency: currencyCode}) :
+        `(${variants.length} of ${totalVariants} variants selected)`;
+      const img = images?.[0]?.originalSrc || ImageIcon;
+      const alt = images?.[0]?.altText || title;
+
+      const handleRemoveProduct = () => {
+        const newProducts = conditions[index].products.filter((p) => p.id !== id);
+        setConditions((prevConditions) => {
+          return prevConditions.map((condition, i) => {
+            if (i === index) {
+              return {
+                ...condition,
+                products: newProducts
+              };
+            }
+            return condition;
+          });
+        });
+      };
+
+      return (
+        <Box borderBlockEndWidth={isLast ? '0' : '025'} padding="300" borderColor="border-brand">
+          <InlineStack blockAlign="center" align="space-between">
+            <InlineStack gap="300">
+              <Thumbnail source={img} alt={alt} />
+              <Box>
+                <Text as="p">{title}</Text>
+                <Text as="p">{tips}</Text>
+              </Box>
+            </InlineStack>
+            <InlineStack gap="400">
+              {!hasOnlyDefaultVariant && <Button variant="plain" onClick={handleSelectBuys}>Edit</Button>}
+              <Button variant="plain" icon={XSmallIcon} onClick={handleRemoveProduct} />
+            </InlineStack>
+          </InlineStack>
+        </Box>
+      );
+    }
+
+    return (
+      <>
+        {
+          products && (
+            <Box borderWidth={products.length ? '025' : '0'} borderRadius="200" borderColor="border-brand">
+              {products.map((product, idx) => (
+                <ProductItem
+                  key={product.id}
+                  product={product}
+                  isLast={idx === products.length - 1}
+                />
+              ))}
+            </Box>
+          )
+        }
+
+      </>
+    )
+  }
 
   return (
     <Page
@@ -256,28 +371,59 @@ export default function Discount() {
                       />
                       <RadioButton
                         label="Minimum purchase amount"
-                        id="PURCHASE"
+                        id="AMOUNT"
                         name="trigger_condition"
-                        checked={triggerCondition === 'PURCHASE'}
+                        checked={triggerCondition === 'AMOUNT'}
                         onChange={handleConditionChange}
                       />
                     </BlockStack>
-                    <Divider />
-                    <InlineGrid columns="1fr 2fr" gap="200">
-                      <TextField
-                        autoComplete="off"
-                        type="number"
-                        onChange={handleChangeTriggerConditionValue}
-                        value={triggerConditionValue}
-                        label={triggerCondition === 'QUANTITY' ? 'Quantity' : 'Amount'}
-                        prefix={triggerCondition === 'QUANTITY' ? '' : <CurrencySymbol currencyCode={currencyCode} />}
-                      />
-                    </InlineGrid>
+                  </Box>
+                  <Divider />
+                  <Box>
+                    <BlockStack>
+                      <Text as="p">{triggerCondition === 'QUANTITY' ? 'Quantity' : 'Amount'}</Text>
+                    </BlockStack>
+                    <BlockStack gap="400">
+                    {conditions.map((condition, idx) => (
+                      <>
+                        <InlineGrid key={idx} columns="2fr auto auto" gap="200">
+                          {triggerCondition === 'QUANTITY' && (
+                            <TextField
+                              autoComplete="off"
+                              type="number"
+                              onChange={(newValue) => {handleChangeTriggerConditionValue(idx,  newValue, 'quantity')}}
+                              value={condition['quantity']}
+                              label="Quantity"
+                              labelHidden={true}
+                            />
+                          )}
+                          {triggerCondition === 'AMOUNT' && (
+                            <TextField
+                              autoComplete="off"
+                              type="number"
+                              onChange={(newValue) => {handleChangeTriggerConditionValue(idx, newValue, 'amount')}}
+                              value={condition['amount']}
+                              label="Amount"
+                              labelHidden={true}
+                              prefix={<CurrencySymbol currencyCode={currencyCode} />}
+                            />
+                          )}
+                          <Button onClick={() => handleSelectGets(idx)}>Customer gets</Button>
+                          <Button icon={DeleteIcon} onClick={() => handleDeleteGets(idx)} />
+                        </InlineGrid>
+                        <SelectedGets index={idx} products={condition['products']} />
+                      </>
+                    ))}
+                    </BlockStack>
+                  </Box>
+                  <Box paddingBlockStart="100">
+                    <Button onClick={addCondition} accessibilityLabel="Add condition" variant="plain" icon={PlusIcon}>
+                      Add condition
+                    </Button>
                   </Box>
                 </BlockStack>
               </Card>
             </BlockStack>
-
           </form>
         </Layout.Section>
         <Layout.Section variant="oneThird">
