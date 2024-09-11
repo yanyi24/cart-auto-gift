@@ -33,9 +33,12 @@ export default function Discount() {
   const { isNew, currencyCode } = useLoaderData();
   const [buyType, setBuyType] = useState('ALL_PRODUCTS');
   const [triggerCondition, setTriggerCondition] = useState('QUANTITY');
+  const [discounted, setDiscounted] = useState('PERCENTAGE');
   const [conditions, setConditions] = useState([{ quantity: undefined, amount: undefined, products: [] }]);
   const [selectedBuysProducts, setSelectedBuysProducts] = useState([]);
   const [selectedBuysCollections, setSelectedBuysCollections] = useState([]);
+  const [discountedPercentage, setDiscountedPercentage] = useState('');
+  const [discountedEachOff, setDiscountedEachOff] = useState('');
 
   // Options for Select dropdown
   const buyTypeOptions = [
@@ -47,6 +50,7 @@ export default function Discount() {
   // Handle state change callbacks
   const handleBuyTypeChange = useCallback(setBuyType, [setBuyType]);
   const handleConditionChange = useCallback((_, newValue) => setTriggerCondition(newValue), []);
+  const handleDiscountedChange = useCallback((_, newValue) => setDiscounted(newValue), []);
 
   const updateConditionValue = useCallback((idx, newValue, type) => {
     setConditions((prev) => prev.map((c, i) => i === idx ? { ...c, [type]: newValue } : c));
@@ -214,6 +218,60 @@ export default function Discount() {
                   <Box>
                     <Button onClick={addCondition} accessibilityLabel="Add condition" variant="plain" icon={PlusIcon}>Add condition</Button>
                   </Box>
+                </BlockStack>
+              </Card>
+
+              <Card>
+                <BlockStack gap="200">
+                  <Text variant="headingMd" as="h2">At a discounted value</Text>
+                  <Text as="p">The discount will be applied to any gifts that the customer receives.</Text>
+                  <BlockStack>
+                    <RadioButton
+                      label="Percentage"
+                      checked={discounted === 'PERCENTAGE'}
+                      id="PERCENTAGE"
+                      name="discounted"
+                      onChange={(handleDiscountedChange)}
+                    />
+                    {discounted === 'PERCENTAGE' && (
+                      <Box paddingInlineStart="600" width="200px">
+                        <TextField
+                          label="Percentage"
+                          labelHidden
+                          value={discountedPercentage}
+                          onChange={(value) => setDiscountedPercentage(value)}
+                          suffix="%"
+                          autoComplete="off"
+                        />
+                      </Box>
+                    )}
+                    <RadioButton
+                      label="Amount off each"
+                      id="EACH_OFF"
+                      name="discounted"
+                      checked={discounted === 'EACH_OFF'}
+                      onChange={handleDiscountedChange}
+                    />
+                    {discounted === 'EACH_OFF' && (
+                      <Box paddingInlineStart="600" width="200px">
+                        <TextField
+                          label="Each off"
+                          labelHidden
+                          value={discountedEachOff}
+                          onChange={(value) => setDiscountedEachOff(value)}
+                          prefix={<CurrencySymbol currencyCode={currencyCode} />}
+                          autoComplete="off"
+                        />
+                      </Box>
+                    )}
+                    <RadioButton
+                      label="Free"
+                      id="FREE"
+                      name="discounted"
+                      checked={discounted === 'FREE'}
+                      onChange={handleDiscountedChange}
+                    />
+                  </BlockStack>
                 </BlockStack>
               </Card>
             </BlockStack>
