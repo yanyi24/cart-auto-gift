@@ -1,13 +1,15 @@
 import {
-  BlockStack, Box, Button, Card, Divider, InlineGrid, Layout, Page, RadioButton, Select, Text, TextField
+  BlockStack, Box, Button, Card, Divider, InlineGrid, Layout, Page, PageActions, RadioButton, Select, Text, TextField
 } from "@shopify/polaris";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import { useCallback, useState } from "react";
+import {useCallback, useMemo, useState} from "react";
 import { DeleteIcon, PlusIcon } from "@shopify/polaris-icons";
 import shopify from "../shopify.server.js";
 import CurrencySymbol from "../components/CurrencySymbol.jsx";
 import SelectedTargets from "../components/SelectedTargets.jsx";
+import {ActiveDatesCard, CombinationCard, DiscountClass} from "@shopify/discount-app-components";
+import {useField} from "@shopify/react-form";
 
 export const loader = async ({ params, request }) => {
   const { admin } = await shopify.authenticate.admin(request);
@@ -33,12 +35,20 @@ export default function Discount() {
   const { isNew, currencyCode } = useLoaderData();
   const [buyType, setBuyType] = useState('ALL_PRODUCTS');
   const [triggerCondition, setTriggerCondition] = useState('QUANTITY');
-  const [discounted, setDiscounted] = useState('PERCENTAGE');
+  const [discounted, setDiscounted] = useState('FREE');
   const [conditions, setConditions] = useState([{ quantity: undefined, amount: undefined, products: [] }]);
   const [selectedBuysProducts, setSelectedBuysProducts] = useState([]);
   const [selectedBuysCollections, setSelectedBuysCollections] = useState([]);
   const [discountedPercentage, setDiscountedPercentage] = useState('');
   const [discountedEachOff, setDiscountedEachOff] = useState('');
+  const todayDate = useMemo(() => new Date(), []);
+  const combinesWith =  useField({
+    orderDiscounts: false,
+    productDiscounts: false,
+    shippingDiscounts: false,
+  });
+  const startDate = useField(todayDate);
+  const endDate = useField(null);
 
   // Options for Select dropdown
   const buyTypeOptions = [
@@ -82,12 +92,14 @@ export default function Discount() {
   function removeCondition(idx) {
     setConditions(conditions.filter((_, i) => i !== idx));
   }
+  async function handleSave() {
 
+  }
   return (
     <Page
       backAction={{ url: '/app/discounts' }}
       title={isNew ? 'New discount' : 'Edit discount'}
-      primaryAction={{ content: 'Save', onAction: () => {} }}
+      primaryAction={{ content: 'Save', onAction: handleSave }}
     >
       <Layout>
         <Layout.Section>
@@ -201,7 +213,7 @@ export default function Discount() {
                               />
                             )}
                             <Button onClick={() => handleSelectGets(idx)}>Customer gets</Button>
-                            <Button icon={DeleteIcon} onClick={() => removeCondition(idx)} />
+                            <Button disabled={idx === 0} icon={DeleteIcon} onClick={() => removeCondition(idx)} />
                           </InlineGrid>
 
                         </Box>
@@ -226,6 +238,13 @@ export default function Discount() {
                   <Text variant="headingMd" as="h2">At a discounted value</Text>
                   <Text as="p">The discount will be applied to any gifts that the customer receives.</Text>
                   <BlockStack>
+                    <RadioButton
+                      label="Free"
+                      id="FREE"
+                      name="discounted"
+                      checked={discounted === 'FREE'}
+                      onChange={handleDiscountedChange}
+                    />
                     <RadioButton
                       label="Percentage"
                       checked={discounted === 'PERCENTAGE'}
@@ -264,23 +283,44 @@ export default function Discount() {
                         />
                       </Box>
                     )}
-                    <RadioButton
-                      label="Free"
-                      id="FREE"
-                      name="discounted"
-                      checked={discounted === 'FREE'}
-                      onChange={handleDiscountedChange}
-                    />
                   </BlockStack>
                 </BlockStack>
               </Card>
             </BlockStack>
+            <Box paddingBlockStart="400">
+              <CombinationCard
+                combinableDiscountTypes={combinesWith}
+                discountClass={DiscountClass.Product}
+                discountDescriptor={"Discount"}
+              />
+
+              <ActiveDatesCard
+                startDate={startDate}
+                endDate={endDate}
+                timezoneAbbreviation="EST"
+              />
+            </Box>
+
+
           </form>
         </Layout.Section>
         <Layout.Section variant="oneThird">
           <Card />
         </Layout.Section>
       </Layout>
+      <PageActions
+        primaryAction={{
+          content: 'Save',
+          onAction: handleSave
+        }}
+        secondaryActions={[
+          {
+            content: 'Discard',
+            onAction: () => {
+            }
+          },
+        ]}
+      />
     </Page>
   );
 }
