@@ -1,21 +1,11 @@
-import {
-  BlockStack, Box,
-  Button,
-  Card, Divider,
-  InlineGrid, InlineStack,
-  Layout,
-  Page, RadioButton,
-  Select,
-  Text,
-  TextField, Thumbnail
-} from "@shopify/polaris";
+import { BlockStack, Box, Button, Card, Divider, InlineGrid, Layout,  Page, RadioButton, Select, Text, TextField } from "@shopify/polaris";
 import {json} from "@remix-run/node";
 import {useLoaderData} from "@remix-run/react";
 import {useCallback, useState} from "react";
-import {DeleteIcon, ImageIcon, PlusIcon, XSmallIcon} from "@shopify/polaris-icons";
-import {useI18n} from "@shopify/react-i18n";
+import {DeleteIcon,  PlusIcon} from "@shopify/polaris-icons";
 import shopify from "../shopify.server.js";
 import CurrencySymbol from "../components/CurrencySymbol.jsx";
+import SelectedTargets from "../components/SelectedTargets.jsx";
 
 export  const loader = async ({params, request}) => {
   const { admin } = await shopify.authenticate.admin(request);
@@ -37,11 +27,8 @@ export const action = async ({request}) => {
   // TODO: implement
 };
 
-
-
 export default function Discount() {
   const {isNew, currencyCode} = useLoaderData();
-  const [i18n] = useI18n();
 
   const [buyType, setBuyType] = useState('ALL_PRODUCTS');
   const options = [
@@ -73,13 +60,12 @@ export default function Discount() {
     []
   );
 
-
   const [selectedBuysProducts, setSelectedBuysProducts] = useState([]);
   const [selectedBuysCollections, setSelectedBuysCollections] = useState([]);
 
   const [conditions, setConditions] = useState([{
-    quantity: null,
-    amount: null,
+    quantity: undefined,
+    amount: undefined,
     products: []
   }]);
 
@@ -90,14 +76,9 @@ export default function Discount() {
   }
   async function handleSelectGets(idx) {
     const selectionIds = conditions[idx].products;
-    const data = await window.shopify.resourcePicker({
-      type: 'product',
-      action: 'add',
-      multiple: true,
-      selectionIds
-    });
+    const data = await resourcePicker({type: 'product', selectionIds});
 
-    if (data.length) {
+    if (data?.length) {
       setConditions((prevConditions) => {
         return prevConditions.map((condition, index) => {
           if (index === idx) {
@@ -114,34 +95,11 @@ export default function Discount() {
   async function handleSelectBuys() {
     const isCollection = buyType === 'COLLECTIONS';
     const type = isCollection ? 'collection' : 'product';
-    let selectionIds = [];
+    const selectionIds = isCollection ? selectedBuysCollections : selectedBuysProducts;
 
-    if (isCollection) {
-      selectionIds = selectedBuysCollections && selectedBuysCollections.map(c => ({id: c.id}));
-    } else {
-      if (selectedBuysProducts) {
-        selectionIds = selectedBuysProducts.map(p => {
-          if (p.hasOnlyDefaultVariant || p.totalVariants === p.variants.length){
-            return {id: p.id};
-          } else {
-            const variants = p.variants.map(v => ({id: v.id}));
-            return {
-              id: p.id,
-              variants
-            };
-          }
-        })
-      }
-    }
+    const data = await resourcePicker({type, selectionIds})
 
-    const data = await window.shopify.resourcePicker({
-      type,
-      action: 'add',
-      multiple: true,
-      selectionIds
-    });
-
-    if (data.length) {
+    if (data?.length) {
       isCollection ? setSelectedBuysCollections(data) : setSelectedBuysProducts(data);
     }
   }
@@ -149,166 +107,36 @@ export default function Discount() {
   function addCondition() {
     if (conditions.find(c => c.products.length === 0)) return;
     setConditions((prevConditions) => [...prevConditions, {
-      quantity: null,
-      amount: null,
+      quantity: undefined,
+      amount: undefined,
       products: []
     }]);
   }
-  const SelectedTargets = ({products, collections}) => {
-    const ProductItem = ({product, isLast}) => {
-      const {totalVariants, variants, title, hasOnlyDefaultVariant, images, id} = product;
-      const tips = hasOnlyDefaultVariant ?
-        i18n.formatCurrency(variants[0].price, {currency: currencyCode}) :
-        `(${variants.length} of ${totalVariants} variants selected)`;
-      const img = images?.[0]?.originalSrc || ImageIcon;
-      const alt = images?.[0]?.altText || title;
-
-      const handleRemoveProduct = () => {
-        setSelectedBuysProducts((prevProducts) =>
-          prevProducts.filter((p) => p.id !== id)
-        );
-      };
-
-      return (
-        <Box borderBlockEndWidth={isLast ? '0' : '025'} padding="300" borderColor="border-brand">
-          <InlineStack blockAlign="center" align="space-between">
-            <InlineStack gap="300">
-              <Thumbnail source={img} alt={alt} />
-              <Box>
-                <Text as="p">{title}</Text>
-                <Text as="p">{tips}</Text>
-              </Box>
-            </InlineStack>
-            <InlineStack gap="400">
-              {!hasOnlyDefaultVariant && <Button variant="plain" onClick={handleSelectBuys}>Edit</Button>}
-              <Button variant="plain" icon={XSmallIcon} onClick={handleRemoveProduct} />
-            </InlineStack>
-          </InlineStack>
-        </Box>
-      );
-    }
-    const CollectionItem = ({collection, isLast}) => {
-      const {productsCount, title, image, id} = collection;
-      const tips = productsCount > 1 ? `${productsCount} products` : `${productsCount} product`;
-      const img = image?.originalSrc || ImageIcon;
-
-      const handleRemoveCollection = () => {
-        setSelectedBuysCollections((prevCollections) =>
-          prevCollections.filter((c) => c.id !== id)
-        );
-      };
-
-      return (
-        <Box borderBlockEndWidth={isLast ? '0' : '025'} padding="300" borderColor="border-brand">
-          <InlineStack blockAlign="center" align="space-between">
-            <InlineStack gap="300">
-              <Thumbnail source={img} alt={title} />
-              <Box>
-                <Text as="p">{title}</Text>
-                <Text as="p">{tips}</Text>
-              </Box>
-            </InlineStack>
-            <InlineStack gap="400">
-              <Button variant="plain" icon={XSmallIcon} onClick={handleRemoveCollection} />
-            </InlineStack>
-          </InlineStack>
-        </Box>
-      )
-    }
-
-    return (
-      <>
-        {
-          products && (
-            <Box borderWidth={products.length ? '025' : '0'} borderRadius="200" borderColor="border-brand">
-              {products.map((product, idx) => (
-                <ProductItem
-                  key={product.id}
-                  product={product}
-                  isLast={idx === products.length - 1}
-                />
-              ))}
-            </Box>
-          )
-        }
-        {
-          collections && (
-            <Box borderWidth={collections.length ? '025' : '0'} borderRadius="200" borderColor="border-brand">
-              {collections.map((collection, idx) => (
-                <CollectionItem
-                  key={collection.id}
-                  collection={collection}
-                  isLast={idx === collections.length - 1}
-                />
-              ))}
-            </Box>
-          )
-        }
-      </>
-    )
+  function handleRemoveProductBuys(id) {
+    setSelectedBuysProducts((prevProducts) =>
+      prevProducts.filter((p) => p.id !== id)
+    );
   }
-  const SelectedGets = ({products, index}) => {
-    const ProductItem = ({product, isLast}) => {
-      const {totalVariants, variants, title, hasOnlyDefaultVariant, images, id} = product;
-      const tips = hasOnlyDefaultVariant ?
-        i18n.formatCurrency(variants[0].price, {currency: currencyCode}) :
-        `(${variants.length} of ${totalVariants} variants selected)`;
-      const img = images?.[0]?.originalSrc || ImageIcon;
-      const alt = images?.[0]?.altText || title;
-
-      const handleRemoveProduct = () => {
-        const newProducts = conditions[index].products.filter((p) => p.id !== id);
-        setConditions((prevConditions) => {
-          return prevConditions.map((condition, i) => {
-            if (i === index) {
-              return {
-                ...condition,
-                products: newProducts
-              };
-            }
-            return condition;
-          });
-        });
-      };
-
-      return (
-        <Box borderBlockEndWidth={isLast ? '0' : '025'} padding="300" borderColor="border-brand">
-          <InlineStack blockAlign="center" align="space-between">
-            <InlineStack gap="300">
-              <Thumbnail source={img} alt={alt} />
-              <Box>
-                <Text as="p">{title}</Text>
-                <Text as="p">{tips}</Text>
-              </Box>
-            </InlineStack>
-            <InlineStack gap="400">
-              {!hasOnlyDefaultVariant && <Button variant="plain" onClick={handleSelectBuys}>Edit</Button>}
-              <Button variant="plain" icon={XSmallIcon} onClick={handleRemoveProduct} />
-            </InlineStack>
-          </InlineStack>
-        </Box>
-      );
-    }
-
-    return (
-      <>
-        {
-          products && (
-            <Box borderWidth={products.length ? '025' : '0'} borderRadius="200" borderColor="border-brand">
-              {products.map((product, idx) => (
-                <ProductItem
-                  key={product.id}
-                  product={product}
-                  isLast={idx === products.length - 1}
-                />
-              ))}
-            </Box>
-          )
+  function handleRemoveProductGets(index, id) {
+    const newProducts = conditions[index].products.filter((p) => p.id !== id);
+    setConditions((prevConditions) => {
+      return prevConditions.map((condition, i) => {
+        if (i === index) {
+          return {
+            ...condition,
+            products: newProducts
+          };
         }
-
-      </>
-    )
+        return condition;
+      });
+    });
   }
+  function handleRemoveCollectionBuys(id) {
+    setSelectedBuysCollections((prevCollections) =>
+      prevCollections.filter((c) => c.id !== id)
+    );
+  }
+
 
   return (
     <Page
@@ -353,8 +181,23 @@ export default function Discount() {
                       )}
                     </InlineGrid>
                   </Box>
-                  {buyType === 'PRODUCTS' && <SelectedTargets products={selectedBuysProducts}/>}
-                  {buyType === 'COLLECTIONS' && <SelectedTargets collections={selectedBuysCollections}/>}
+                  {
+                    buyType === 'PRODUCTS' &&
+                    <SelectedTargets
+                      products={selectedBuysProducts}
+                      onRemove={handleRemoveProductBuys}
+                      onEdit={handleSelectBuys}
+                      currencyCode={currencyCode}
+                    />
+                  }
+                  {
+                    buyType === 'COLLECTIONS' &&
+                    <SelectedTargets
+                      collections={selectedBuysCollections}
+                      onRemove={handleRemoveCollectionBuys}
+                      currencyCode={currencyCode}
+                    />
+                  }
                 </BlockStack>
               </Card>
               <Card>
@@ -385,8 +228,8 @@ export default function Discount() {
                     </BlockStack>
                     <BlockStack gap="400">
                     {conditions.map((condition, idx) => (
-                      <>
-                        <InlineGrid key={idx} columns="2fr auto auto" gap="200">
+                      <Box key={idx}>
+                        <InlineGrid columns="2fr auto auto" gap="200">
                           {triggerCondition === 'QUANTITY' && (
                             <TextField
                               autoComplete="off"
@@ -411,15 +254,18 @@ export default function Discount() {
                           <Button onClick={() => handleSelectGets(idx)}>Customer gets</Button>
                           <Button icon={DeleteIcon} onClick={() => handleDeleteGets(idx)} />
                         </InlineGrid>
-                        <SelectedGets index={idx} products={condition['products']} />
-                      </>
+                        <SelectedTargets
+                          products={condition['products']}
+                          onRemove={(id) => handleRemoveProductGets(idx, id)}
+                          onEdit={() => handleSelectGets(idx)}
+                          currencyCode={currencyCode}
+                        />
+                      </Box>
                     ))}
                     </BlockStack>
                   </Box>
-                  <Box paddingBlockStart="100">
-                    <Button onClick={addCondition} accessibilityLabel="Add condition" variant="plain" icon={PlusIcon}>
-                      Add condition
-                    </Button>
+                  <Box>
+                    <Button onClick={addCondition} accessibilityLabel="Add condition" variant="plain" icon={PlusIcon}>Add condition</Button>
                   </Box>
                 </BlockStack>
               </Card>
@@ -432,4 +278,14 @@ export default function Discount() {
       </Layout>
     </Page>
   )
+}
+
+
+async function resourcePicker({type, selectionIds}) {
+  return await window.shopify.resourcePicker({
+    type,
+    action: 'add',
+    multiple: true,
+    selectionIds
+  });
 }
