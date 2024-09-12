@@ -3,7 +3,7 @@
 client_id = "ebe06dfd29d1a471cf52210f18501ec7"
 name = "Cart Auto Gift"
 handle = "cart-auto-gift"
-application_url = "https://sciences-reaches-marble-archived.trycloudflare.com"
+application_url = "https://strategies-pre-ride-planets.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_customers,read_products,read_shipping,write_discounts,write_disco
 
 [auth]
 redirect_urls = [
-  "https://sciences-reaches-marble-archived.trycloudflare.com/auth/callback",
-  "https://sciences-reaches-marble-archived.trycloudflare.com/auth/shopify/callback",
-  "https://sciences-reaches-marble-archived.trycloudflare.com/api/auth/callback"
+  "https://strategies-pre-ride-planets.trycloudflare.com/auth/callback",
+  "https://strategies-pre-ride-planets.trycloudflare.com/auth/shopify/callback",
+  "https://strategies-pre-ride-planets.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

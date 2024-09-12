@@ -27,8 +27,83 @@ export const loader = async ({ params, request }) => {
   });
 };
 
+
 export const action = async ({ request }) => {
-  // TODO: implement
+  const { admin } = await shopify.authenticate.admin(request);
+  const formData = await request.formData();
+  // https://yanyi-checkout.myshopify.com/products/the-collection-snowboard-oxygen 48647179534626
+  // https://yanyi-checkout.myshopify.com/products/the-collection-snowboard-liquid 48647179960610
+  // https://yanyi-checkout.myshopify.com/products/the-compare-at-price-snowboard?variant=48647179338018
+  //'48647179338018'
+
+  const metafields = [
+    {
+      namespace: "$app:auto-gift",
+      key: "amount-configuration",
+      type: "json",
+      value: JSON.stringify(
+        {
+          buys:{
+            type: 'PRODUCTS',
+            value: ['48647179960610', '48647179534626']
+          } ,
+          triggerType: 'QUANTITY',
+          conditions: [
+            {
+              value: 1,
+              gets: ['48647178879266'],
+            },
+            {
+              value: 2,
+              gets: ['48647178912034'],
+            }
+          ],
+          discounted: {
+            type: 'FREE',
+            value: ''
+          }
+        }
+      ),
+    },
+  ];
+  const baseDiscount = {
+    functionId: '719888f5-7141-4eeb-9252-8a0dfb381d89',
+    title: 'Test buy x get y discount',
+    startsAt: "2024-06-22T00:00:00",
+    combinesWith: {
+      productDiscounts: true
+    }
+  };
+
+  const response = await admin.graphql(
+      `#graphql
+    mutation CreateAutomaticDiscount($discount: DiscountAutomaticAppInput!) {
+      discountCreate: discountAutomaticAppCreate(automaticAppDiscount: $discount) {
+        automaticAppDiscount {
+          discountId
+        }
+        userErrors {
+          code
+          message
+          field
+        }
+      }
+    }`,
+    {
+      variables: {
+        discount: {
+          ...baseDiscount,
+          metafields,
+        },
+      },
+    },
+  );
+
+  const responseJson = await response.json();
+  const errors = responseJson.data.discountCreate?.userErrors;
+  const discount = responseJson.data.discountCreate?.automaticAppDiscount;
+  console.log({errors, discount})
+  return null;
 };
 
 export default function Discount() {
@@ -93,7 +168,8 @@ export default function Discount() {
     setConditions(conditions.filter((_, i) => i !== idx));
   }
   async function handleSave() {
-
+    const form = document.getElementById('discountForm');
+    form.submit();
   }
   return (
     <Page

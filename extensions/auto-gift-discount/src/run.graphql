@@ -1,0 +1,39 @@
+query RunInput {
+  cart {
+    cost {
+      subtotalAmount {
+        amount
+        currencyCode
+      }
+      totalAmount {
+        amount
+        currencyCode
+      }
+    }
+    buyerIdentity {
+      customer {
+        id
+        hasTags(tags: ["student"]){
+          hasTag
+        }
+      }
+    }
+    lines {
+      id
+      quantity
+      merchandise{
+        ... on ProductVariant{
+          id
+          product {
+            inAnyCollection(ids: ["gid://shopify/Collection/483853533474"])
+          }
+        }
+      }
+    }
+  }
+  discountNode {
+    metafield(namespace: "$app:auto-gift", key: "amount-configuration") {
+      value
+    }
+  }
+}
