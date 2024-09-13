@@ -32,8 +32,7 @@ export function run(input) {
   if (buys.type === 'PRODUCTS') {
     const value = buys.value;
     input.cart.lines.forEach(line => {
-      const idArr = line.merchandise.id.split('/');
-      const id = idArr[idArr.length - 1];
+      const id = line.merchandise.id.split('/').pop();
       if (value.includes(id)) {
         xsInCart.push(id);
       }

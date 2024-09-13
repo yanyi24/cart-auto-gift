@@ -10,6 +10,7 @@ import CurrencySymbol from "../components/CurrencySymbol.jsx";
 import SelectedTargets from "../components/SelectedTargets.jsx";
 import {ActiveDatesCard, CombinationCard, DiscountClass} from "@shopify/discount-app-components";
 import {useField} from "@shopify/react-form";
+import {removeGidStr} from "../utils.js";
 
 export const loader = async ({ params, request }) => {
   const { admin } = await shopify.authenticate.admin(request);
@@ -35,7 +36,8 @@ export const action = async ({ request }) => {
   // https://yanyi-checkout.myshopify.com/products/the-collection-snowboard-liquid 48647179960610
   // https://yanyi-checkout.myshopify.com/products/the-compare-at-price-snowboard?variant=48647179338018
   //'48647179338018'
-
+  console.log("hahhah")
+  console.log({ formData})
   const metafields = [
     {
       namespace: "$app:auto-gift",
@@ -71,57 +73,60 @@ export const action = async ({ request }) => {
     title: 'Test buy x get y discount',
     startsAt: "2024-06-22T00:00:00",
     combinesWith: {
-      productDiscounts: true
+      orderDiscounts: true,
+      productDiscounts: true,
+      shippingDiscounts: true,
     }
   };
 
-  const response = await admin.graphql(
-      `#graphql
-    mutation CreateAutomaticDiscount($discount: DiscountAutomaticAppInput!) {
-      discountCreate: discountAutomaticAppCreate(automaticAppDiscount: $discount) {
-        automaticAppDiscount {
-          discountId
-        }
-        userErrors {
-          code
-          message
-          field
-        }
-      }
-    }`,
-    {
-      variables: {
-        discount: {
-          ...baseDiscount,
-          metafields,
-        },
-      },
-    },
-  );
-
-  const responseJson = await response.json();
-  const errors = responseJson.data.discountCreate?.userErrors;
-  const discount = responseJson.data.discountCreate?.automaticAppDiscount;
-  console.log({errors, discount})
+  // const response = await admin.graphql(
+  //     `#graphql
+  //   mutation CreateAutomaticDiscount($discount: DiscountAutomaticAppInput!) {
+  //     discountCreate: discountAutomaticAppCreate(automaticAppDiscount: $discount) {
+  //       automaticAppDiscount {
+  //         discountId
+  //       }
+  //       userErrors {
+  //         code
+  //         message
+  //         field
+  //       }
+  //     }
+  //   }`,
+  //   {
+  //     variables: {
+  //       discount: {
+  //         ...baseDiscount,
+  //         metafields,
+  //       },
+  //     },
+  //   },
+  // );
+  //
+  // const responseJson = await response.json();
+  // const errors = responseJson.data.discountCreate?.userErrors;
+  // const discount = responseJson.data.discountCreate?.automaticAppDiscount;
+  // console.log({errors, discount})
   return null;
 };
 
 export default function Discount() {
   const { isNew, currencyCode } = useLoaderData();
+  const [title, setTitle] = useState('test');
   const [buyType, setBuyType] = useState('ALL_PRODUCTS');
-  const [triggerCondition, setTriggerCondition] = useState('QUANTITY');
-  const [discounted, setDiscounted] = useState('FREE');
-  const [conditions, setConditions] = useState([{ quantity: undefined, amount: undefined, products: [] }]);
+  const [rule, setRule] = useState('QUANTITY');
+  const [conditions, setConditions] = useState([{
+    quantity: undefined,
+    amount: undefined,
+    products: [],
+    discounted: 'FREE',
+    discountedPercentage: '',
+    discountedEachOff: ''
+  }]);
   const [selectedBuysProducts, setSelectedBuysProducts] = useState([]);
   const [selectedBuysCollections, setSelectedBuysCollections] = useState([]);
-  const [discountedPercentage, setDiscountedPercentage] = useState('');
-  const [discountedEachOff, setDiscountedEachOff] = useState('');
   const todayDate = useMemo(() => new Date(), []);
-  const combinesWith =  useField({
-    orderDiscounts: false,
-    productDiscounts: false,
-    shippingDiscounts: false,
-  });
+
   const startDate = useField(todayDate);
   const endDate = useField(null);
 
@@ -133,9 +138,9 @@ export default function Discount() {
   ];
 
   // Handle state change callbacks
+  const handleTitleChange = useCallback((newValue) => setTitle(newValue), []);
   const handleBuyTypeChange = useCallback(setBuyType, [setBuyType]);
-  const handleConditionChange = useCallback((_, newValue) => setTriggerCondition(newValue), []);
-  const handleDiscountedChange = useCallback((_, newValue) => setDiscounted(newValue), []);
+  const handleRuleChange = useCallback((_, newValue) => setRule(newValue), []);
 
   const updateConditionValue = useCallback((idx, newValue, type) => {
     setConditions((prev) => prev.map((c, i) => i === idx ? { ...c, [type]: newValue } : c));
@@ -161,7 +166,7 @@ export default function Discount() {
   // Handle adding/removing conditions
   function addCondition() {
     if (conditions.some(c => c.products.length === 0)) return;
-    setConditions([...conditions, { quantity: undefined, amount: undefined, products: [] }]);
+    setConditions([...conditions, { quantity: undefined, amount: undefined, products: [], discounted: 'FREE', discountedPercentage: '', discountedEachOff: '' }]);
   }
 
   function removeCondition(idx) {
@@ -169,6 +174,33 @@ export default function Discount() {
   }
   async function handleSave() {
     const form = document.getElementById('discountForm');
+    const buys = {
+      type: buyType
+    };
+    if (buyType === 'ALL_PRODUCTS') {
+      buys.value = [];
+    } else if (buyType === 'PRODUCTS') {
+      buys.value = selectedBuysProducts.map(p => ({
+        productId: removeGidStr(p.id),
+        variants: p.variants.map(v => removeGidStr(v.id))
+      }));
+    } else if (buyType === 'COLLECTIONS') {
+      buys.value = selectedBuysCollections.map(c => removeGidStr(c.id));
+    }
+
+    form.querySelector('input[name="buys"]').value = JSON.stringify(buys);
+
+    const conditionsData = conditions.map(c => {
+      c.products = c.products.map(p => ({
+        productId: removeGidStr(p.id),
+        variants: p.variants.map(v => removeGidStr(v.id))
+      }));
+      return c;
+    });
+    form.querySelector('input[name="conditions"]').value = JSON.stringify(conditionsData);
+    form.querySelector('input[name="startDate"]').value = startDate.value;
+    form.querySelector('input[name="endDate"]').value = endDate.value;
+
     form.submit();
   }
   return (
@@ -180,7 +212,12 @@ export default function Discount() {
       <Layout>
         <Layout.Section>
           <form method="post" id="discountForm">
-            <input type="hidden" name="isNew" value={isNew} />
+            <input type="hidden" name="isNew" value={isNew}/>
+            <input type="hidden" name="buys"/>
+            <input type="hidden" name="conditions"/>
+            <input type="hidden" name="startDate"/>
+            <input type="hidden" name="endDate"/>
+
             <BlockStack gap="400">
               <Card>
                 <BlockStack>
@@ -188,8 +225,11 @@ export default function Discount() {
                   <TextField
                     autoComplete="off"
                     label="Title"
+                    name="title"
                     labelHidden
                     helpText="Customers will see this in their cart and at checkout."
+                    value={title}
+                    onChange={handleTitleChange}
                   />
                 </BlockStack>
               </Card>
@@ -207,6 +247,7 @@ export default function Discount() {
                         options={buyTypeOptions}
                         onChange={handleBuyTypeChange}
                         value={buyType}
+                        name="buyType"
                       />
                       {buyType !== 'ALL_PRODUCTS' && (
                         <Button onClick={handleSelectBuys}>Browse</Button>
@@ -238,22 +279,24 @@ export default function Discount() {
               {/* Purchase Conditions Section */}
               <Card>
                 <BlockStack gap="200">
-                  <Text variant="headingMd" as="h2">Purchase rules</Text>
+                  <Text variant="headingMd" as="h2">Purchase rule</Text>
                   <Box>
                     <BlockStack>
                       <RadioButton
                         label="Minimum quantity of items"
-                        checked={triggerCondition === 'QUANTITY'}
+                        checked={rule === 'QUANTITY'}
                         id="QUANTITY"
-                        name="trigger_condition"
-                        onChange={handleConditionChange}
+                        name="rule"
+                        value="QUANTITY"
+                        onChange={handleRuleChange}
                       />
                       <RadioButton
                         label="Minimum purchase amount"
                         id="AMOUNT"
-                        name="trigger_condition"
-                        checked={triggerCondition === 'AMOUNT'}
-                        onChange={handleConditionChange}
+                        value="AMOUNT"
+                        name="rule"
+                        checked={rule === 'AMOUNT'}
+                        onChange={handleRuleChange}
                       />
                     </BlockStack>
                   </Box>
@@ -265,7 +308,7 @@ export default function Discount() {
                   <Text variant="headingMd" as="h2">Conditions</Text>
                   <Box>
                     <BlockStack>
-                      <Text as="p">{triggerCondition === 'QUANTITY' ? 'Quantity' : 'Amount'}</Text>
+                      <Text as="p">{rule === 'QUANTITY' ? 'Quantity' : 'Amount'}</Text>
                     </BlockStack>
                     <BlockStack gap="400">
                       {conditions.map((condition, idx) => (
@@ -273,7 +316,7 @@ export default function Discount() {
                         <Box key={idx}>
                           <Box paddingBlockEnd="300">
                             <InlineGrid columns="2fr auto auto" gap="200">
-                              {triggerCondition === 'QUANTITY' && (
+                              {rule === 'QUANTITY' && (
                                 <TextField
                                   autoComplete="off"
                                   type="number"
@@ -283,7 +326,7 @@ export default function Discount() {
                                   labelHidden
                                 />
                               )}
-                              {triggerCondition === 'AMOUNT' && (
+                              {rule === 'AMOUNT' && (
                                 <TextField
                                   autoComplete="off"
                                   type="number"
@@ -291,13 +334,12 @@ export default function Discount() {
                                   value={condition.amount}
                                   label="Amount"
                                   labelHidden
-                                  prefix={<CurrencySymbol currencyCode={currencyCode} />}
+                                  prefix={<CurrencySymbol currencyCode={currencyCode}/>}
                                 />
                               )}
                               <Button onClick={() => handleSelectGets(idx)}>Customer gets</Button>
-                              <Button disabled={idx === 0} icon={DeleteIcon} onClick={() => removeCondition(idx)} />
+                              <Button disabled={idx === 0} icon={DeleteIcon} onClick={() => removeCondition(idx)}/>
                             </InlineGrid>
-
                           </Box>
                           <SelectedTargets
                             products={condition.products}
@@ -307,29 +349,29 @@ export default function Discount() {
                           />
                           <Box paddingBlockStart="300">
                             <BlockStack gap="200">
-                              <Text variant="headingSm" as="h2">At a discounted value</Text>
+                              <Text variant="headingSm" as="h2">Discount</Text>
                               <BlockStack>
                                 <RadioButton
                                   label="Free"
-                                  id="FREE"
-                                  name="discounted"
-                                  checked={discounted === 'FREE'}
-                                  onChange={handleDiscountedChange}
+                                  id={`FREE-${idx}`}
+                                  value='FREE'
+                                  checked={condition.discounted === 'FREE'}
+                                  onChange={() => updateConditionValue(idx, 'FREE', 'discounted')}
                                 />
                                 <RadioButton
                                   label="Percentage"
-                                  checked={discounted === 'PERCENTAGE'}
-                                  id="PERCENTAGE"
-                                  name="discounted"
-                                  onChange={(handleDiscountedChange)}
+                                  checked={condition.discounted === 'PERCENTAGE'}
+                                  id={`PERCENTAGE-${idx}`}
+                                  value="PERCENTAGE"
+                                  onChange={() => updateConditionValue(idx, 'PERCENTAGE', 'discounted')}
                                 />
-                                {discounted === 'PERCENTAGE' && (
+                                {condition.discounted === 'PERCENTAGE' && (
                                   <Box paddingInlineStart="600" width="200px">
                                     <TextField
                                       label="Percentage"
                                       labelHidden
-                                      value={discountedPercentage}
-                                      onChange={(value) => setDiscountedPercentage(value)}
+                                      value={condition.discountedPercentage}
+                                      onChange={(value) => updateConditionValue(idx, value, 'discountedPercentage')}
                                       suffix="%"
                                       autoComplete="off"
                                     />
@@ -337,19 +379,19 @@ export default function Discount() {
                                 )}
                                 <RadioButton
                                   label="Amount off each"
-                                  id="EACH_OFF"
-                                  name="discounted"
-                                  checked={discounted === 'EACH_OFF'}
-                                  onChange={handleDiscountedChange}
+                                  id={`EACH_OFF-${idx}`}
+                                  value="EACH_OFF"
+                                  checked={condition.discounted === 'EACH_OFF'}
+                                  onChange={() => updateConditionValue(idx, 'EACH_OFF', 'discounted')}
                                 />
-                                {discounted === 'EACH_OFF' && (
+                                {condition.discounted === 'EACH_OFF' && (
                                   <Box paddingInlineStart="600" width="200px">
                                     <TextField
                                       label="Each off"
                                       labelHidden
-                                      value={discountedEachOff}
-                                      onChange={(value) => setDiscountedEachOff(value)}
-                                      prefix={<CurrencySymbol currencyCode={currencyCode} />}
+                                      value={condition.discountedEachOff}
+                                      onChange={(value) => updateConditionValue(idx, value, 'discountedEachOff')}
+                                      prefix={<CurrencySymbol currencyCode={currencyCode}/>}
                                       autoComplete="off"
                                     />
                                   </Box>
@@ -361,20 +403,16 @@ export default function Discount() {
                       ))}
                     </BlockStack>
                   </Box>
-                  <Divider />
+                  <Divider/>
                   <Box>
-                    <Button onClick={addCondition} accessibilityLabel="Add condition" variant="plain" icon={PlusIcon}>Add condition</Button>
+                    <Button onClick={addCondition} accessibilityLabel="Add condition" variant="plain" icon={PlusIcon}>Add
+                      condition</Button>
                   </Box>
                 </BlockStack>
               </Card>
 
             </BlockStack>
             <Box paddingBlockStart="400">
-              <CombinationCard
-                combinableDiscountTypes={combinesWith}
-                discountClass={DiscountClass.Product}
-                discountDescriptor={"Discount"}
-              />
 
               <ActiveDatesCard
                 startDate={startDate}
@@ -415,3 +453,5 @@ async function resourcePicker({ type, selectionIds }) {
     selectionIds
   });
 }
+
+
