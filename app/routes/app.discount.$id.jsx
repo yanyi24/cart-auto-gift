@@ -238,7 +238,7 @@ export default function Discount() {
               {/* Purchase Conditions Section */}
               <Card>
                 <BlockStack gap="200">
-                  <Text variant="headingMd" as="h2">Purchase conditions</Text>
+                  <Text variant="headingMd" as="h2">Purchase rules</Text>
                   <Box>
                     <BlockStack>
                       <RadioButton
@@ -257,111 +257,117 @@ export default function Discount() {
                       />
                     </BlockStack>
                   </Box>
-                  <Divider />
+
+                </BlockStack>
+              </Card>
+              <Card>
+                <BlockStack gap="200">
+                  <Text variant="headingMd" as="h2">Conditions</Text>
                   <Box>
                     <BlockStack>
                       <Text as="p">{triggerCondition === 'QUANTITY' ? 'Quantity' : 'Amount'}</Text>
                     </BlockStack>
                     <BlockStack gap="400">
-                    {conditions.map((condition, idx) => (
-                      <Box key={idx}>
-                        <Box paddingBlockEnd="300">
-                          <InlineGrid columns="2fr auto auto" gap="200">
-                            {triggerCondition === 'QUANTITY' && (
-                              <TextField
-                                autoComplete="off"
-                                type="number"
-                                onChange={(value) => updateConditionValue(idx, value, 'quantity')}
-                                value={condition.quantity}
-                                label="Quantity"
-                                labelHidden
-                              />
-                            )}
-                            {triggerCondition === 'AMOUNT' && (
-                              <TextField
-                                autoComplete="off"
-                                type="number"
-                                onChange={(value) => updateConditionValue(idx, value, 'amount')}
-                                value={condition.amount}
-                                label="Amount"
-                                labelHidden
-                                prefix={<CurrencySymbol currencyCode={currencyCode} />}
-                              />
-                            )}
-                            <Button onClick={() => handleSelectGets(idx)}>Customer gets</Button>
-                            <Button disabled={idx === 0} icon={DeleteIcon} onClick={() => removeCondition(idx)} />
-                          </InlineGrid>
+                      {conditions.map((condition, idx) => (
 
+                        <Box key={idx}>
+                          <Box paddingBlockEnd="300">
+                            <InlineGrid columns="2fr auto auto" gap="200">
+                              {triggerCondition === 'QUANTITY' && (
+                                <TextField
+                                  autoComplete="off"
+                                  type="number"
+                                  onChange={(value) => updateConditionValue(idx, value, 'quantity')}
+                                  value={condition.quantity}
+                                  label="Quantity"
+                                  labelHidden
+                                />
+                              )}
+                              {triggerCondition === 'AMOUNT' && (
+                                <TextField
+                                  autoComplete="off"
+                                  type="number"
+                                  onChange={(value) => updateConditionValue(idx, value, 'amount')}
+                                  value={condition.amount}
+                                  label="Amount"
+                                  labelHidden
+                                  prefix={<CurrencySymbol currencyCode={currencyCode} />}
+                                />
+                              )}
+                              <Button onClick={() => handleSelectGets(idx)}>Customer gets</Button>
+                              <Button disabled={idx === 0} icon={DeleteIcon} onClick={() => removeCondition(idx)} />
+                            </InlineGrid>
+
+                          </Box>
+                          <SelectedTargets
+                            products={condition.products}
+                            onRemove={(id) => updateConditionValue(idx, condition.products.filter((p) => p.id !== id), 'products')}
+                            onEdit={() => handleSelectGets(idx)}
+                            currencyCode={currencyCode}
+                          />
+                          <Box paddingBlockStart="300">
+                            <BlockStack gap="200">
+                              <Text variant="headingSm" as="h2">At a discounted value</Text>
+                              <BlockStack>
+                                <RadioButton
+                                  label="Free"
+                                  id="FREE"
+                                  name="discounted"
+                                  checked={discounted === 'FREE'}
+                                  onChange={handleDiscountedChange}
+                                />
+                                <RadioButton
+                                  label="Percentage"
+                                  checked={discounted === 'PERCENTAGE'}
+                                  id="PERCENTAGE"
+                                  name="discounted"
+                                  onChange={(handleDiscountedChange)}
+                                />
+                                {discounted === 'PERCENTAGE' && (
+                                  <Box paddingInlineStart="600" width="200px">
+                                    <TextField
+                                      label="Percentage"
+                                      labelHidden
+                                      value={discountedPercentage}
+                                      onChange={(value) => setDiscountedPercentage(value)}
+                                      suffix="%"
+                                      autoComplete="off"
+                                    />
+                                  </Box>
+                                )}
+                                <RadioButton
+                                  label="Amount off each"
+                                  id="EACH_OFF"
+                                  name="discounted"
+                                  checked={discounted === 'EACH_OFF'}
+                                  onChange={handleDiscountedChange}
+                                />
+                                {discounted === 'EACH_OFF' && (
+                                  <Box paddingInlineStart="600" width="200px">
+                                    <TextField
+                                      label="Each off"
+                                      labelHidden
+                                      value={discountedEachOff}
+                                      onChange={(value) => setDiscountedEachOff(value)}
+                                      prefix={<CurrencySymbol currencyCode={currencyCode} />}
+                                      autoComplete="off"
+                                    />
+                                  </Box>
+                                )}
+                              </BlockStack>
+                            </BlockStack>
+                          </Box>
                         </Box>
-                        <SelectedTargets
-                          products={condition.products}
-                          onRemove={(id) => updateConditionValue(idx, condition.products.filter((p) => p.id !== id), 'products')}
-                          onEdit={() => handleSelectGets(idx)}
-                          currencyCode={currencyCode}
-                        />
-                      </Box>
-                    ))}
+                      ))}
                     </BlockStack>
                   </Box>
+                  <Divider />
                   <Box>
                     <Button onClick={addCondition} accessibilityLabel="Add condition" variant="plain" icon={PlusIcon}>Add condition</Button>
                   </Box>
                 </BlockStack>
               </Card>
 
-              <Card>
-                <BlockStack gap="200">
-                  <Text variant="headingMd" as="h2">At a discounted value</Text>
-                  <Text as="p">The discount will be applied to any gifts that the customer receives.</Text>
-                  <BlockStack>
-                    <RadioButton
-                      label="Free"
-                      id="FREE"
-                      name="discounted"
-                      checked={discounted === 'FREE'}
-                      onChange={handleDiscountedChange}
-                    />
-                    <RadioButton
-                      label="Percentage"
-                      checked={discounted === 'PERCENTAGE'}
-                      id="PERCENTAGE"
-                      name="discounted"
-                      onChange={(handleDiscountedChange)}
-                    />
-                    {discounted === 'PERCENTAGE' && (
-                      <Box paddingInlineStart="600" width="200px">
-                        <TextField
-                          label="Percentage"
-                          labelHidden
-                          value={discountedPercentage}
-                          onChange={(value) => setDiscountedPercentage(value)}
-                          suffix="%"
-                          autoComplete="off"
-                        />
-                      </Box>
-                    )}
-                    <RadioButton
-                      label="Amount off each"
-                      id="EACH_OFF"
-                      name="discounted"
-                      checked={discounted === 'EACH_OFF'}
-                      onChange={handleDiscountedChange}
-                    />
-                    {discounted === 'EACH_OFF' && (
-                      <Box paddingInlineStart="600" width="200px">
-                        <TextField
-                          label="Each off"
-                          labelHidden
-                          value={discountedEachOff}
-                          onChange={(value) => setDiscountedEachOff(value)}
-                          prefix={<CurrencySymbol currencyCode={currencyCode} />}
-                          autoComplete="off"
-                        />
-                      </Box>
-                    )}
-                  </BlockStack>
-                </BlockStack>
-              </Card>
             </BlockStack>
             <Box paddingBlockStart="400">
               <CombinationCard
