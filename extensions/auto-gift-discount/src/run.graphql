@@ -1,32 +1,21 @@
 query RunInput {
   cart {
-    cost {
-      subtotalAmount {
-        amount
-        currencyCode
-      }
-      totalAmount {
-        amount
-        currencyCode
-      }
-    }
     buyerIdentity {
       customer {
         id
-        hasTags(tags: ["student"]){
-          hasTag
-        }
       }
     }
     lines {
       id
       quantity
+      cost {
+        totalAmount {
+          amount
+        }
+      }
       merchandise{
         ... on ProductVariant{
           id
-          product {
-            inAnyCollection(ids: ["gid://shopify/Collection/483853533474"])
-          }
         }
       }
     }

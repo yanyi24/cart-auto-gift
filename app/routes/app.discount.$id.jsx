@@ -8,12 +8,14 @@ import { DeleteIcon, PlusIcon } from "@shopify/polaris-icons";
 import shopify from "../shopify.server.js";
 import CurrencySymbol from "../components/CurrencySymbol.jsx";
 import SelectedTargets from "../components/SelectedTargets.jsx";
-import {ActiveDatesCard, CombinationCard, DiscountClass} from "@shopify/discount-app-components";
+import {ActiveDatesCard } from "@shopify/discount-app-components";
 import {useField} from "@shopify/react-form";
 import {removeGidStr} from "../utils.js";
 
+let functionId = null;
 export const loader = async ({ params, request }) => {
   const { admin } = await shopify.authenticate.admin(request);
+
   const response = await admin.graphql(`
     query shopInfo {
       shop {
@@ -21,10 +23,27 @@ export const loader = async ({ params, request }) => {
       }
     }
   `);
+  const functionsRes = await admin.graphql(`
+    query functionsInfo {
+      shopifyFunctions(first: 250){
+        nodes{
+          app{
+            handle
+          }
+          apiType
+          title
+          id
+        }
+      }
+    }
+  `);
+
   const { data } = await response.json();
+  const functions = await functionsRes.json();
+  functionId = functions.data?.shopifyFunctions?.nodes.find(node => (node.apiType === 'product_discounts' && node.app.handle === 'cart-auto-gift'))?.id;
   return json({
     isNew: params.id === 'new',
-    currencyCode: data.shop.currencyCode,
+    currencyCode: data?.shop?.currencyCode,
   });
 };
 
@@ -36,8 +55,13 @@ export const action = async ({ request }) => {
   // https://yanyi-checkout.myshopify.com/products/the-collection-snowboard-liquid 48647179960610
   // https://yanyi-checkout.myshopify.com/products/the-compare-at-price-snowboard?variant=48647179338018
   //'48647179338018'
-  console.log("hahhah")
-  console.log({ formData})
+  const rule = formData.get('rule');
+  const isNew = formData.get('isNew');
+  const buys = JSON.parse(formData.get('buys'));
+  const startsAt = formData.get('startDate');
+  const endsAt = formData.get('endDate') || null;
+  const conditions = JSON.parse(formData.get('conditions'));
+  const title = formData.get('title');
   const metafields = [
     {
       namespace: "$app:auto-gift",
@@ -45,68 +69,53 @@ export const action = async ({ request }) => {
       type: "json",
       value: JSON.stringify(
         {
-          buys:{
-            type: 'PRODUCTS',
-            value: ['48647179960610', '48647179534626']
-          } ,
-          triggerType: 'QUANTITY',
-          conditions: [
-            {
-              value: 1,
-              gets: ['48647178879266'],
-            },
-            {
-              value: 2,
-              gets: ['48647178912034'],
-            }
-          ],
-          discounted: {
-            type: 'FREE',
-            value: ''
-          }
+          buys,
+          rule,
+          conditions
         }
       ),
     },
   ];
   const baseDiscount = {
-    functionId: '719888f5-7141-4eeb-9252-8a0dfb381d89',
-    title: 'Test buy x get y discount',
-    startsAt: "2024-06-22T00:00:00",
+    functionId,
+    title,
+    startsAt,
+    endsAt,
     combinesWith: {
       orderDiscounts: true,
       productDiscounts: true,
       shippingDiscounts: true,
     }
   };
+  console.log(baseDiscount)
+  const response = await admin.graphql(
+      `#graphql
+    mutation CreateAutomaticDiscount($discount: DiscountAutomaticAppInput!) {
+      discountCreate: discountAutomaticAppCreate(automaticAppDiscount: $discount) {
+        automaticAppDiscount {
+          discountId
+        }
+        userErrors {
+          code
+          message
+          field
+        }
+      }
+    }`,
+    {
+      variables: {
+        discount: {
+          ...baseDiscount,
+          metafields,
+        },
+      },
+    },
+  );
 
-  // const response = await admin.graphql(
-  //     `#graphql
-  //   mutation CreateAutomaticDiscount($discount: DiscountAutomaticAppInput!) {
-  //     discountCreate: discountAutomaticAppCreate(automaticAppDiscount: $discount) {
-  //       automaticAppDiscount {
-  //         discountId
-  //       }
-  //       userErrors {
-  //         code
-  //         message
-  //         field
-  //       }
-  //     }
-  //   }`,
-  //   {
-  //     variables: {
-  //       discount: {
-  //         ...baseDiscount,
-  //         metafields,
-  //       },
-  //     },
-  //   },
-  // );
-  //
-  // const responseJson = await response.json();
-  // const errors = responseJson.data.discountCreate?.userErrors;
-  // const discount = responseJson.data.discountCreate?.automaticAppDiscount;
-  // console.log({errors, discount})
+  const responseJson = await response.json();
+  const errors = responseJson.data.discountCreate?.userErrors;
+  const discount = responseJson.data.discountCreate?.automaticAppDiscount;
+  console.log({errors, discount})
   return null;
 };
 
@@ -180,7 +189,7 @@ export default function Discount() {
     if (buyType === 'ALL_PRODUCTS') {
       buys.value = [];
     } else if (buyType === 'PRODUCTS') {
-      buys.value = selectedBuysProducts.map(p => ({
+      buys.value = JSON.parse(JSON.stringify(selectedBuysProducts)).map(p => ({
         productId: removeGidStr(p.id),
         variants: p.variants.map(v => removeGidStr(v.id))
       }));
@@ -190,17 +199,20 @@ export default function Discount() {
 
     form.querySelector('input[name="buys"]').value = JSON.stringify(buys);
 
-    const conditionsData = conditions.map(c => {
+    const conditionsData = JSON.parse(JSON.stringify(conditions)).map(c => {
       c.products = c.products.map(p => ({
         productId: removeGidStr(p.id),
         variants: p.variants.map(v => removeGidStr(v.id))
       }));
+      c.quantity && (c.quantity = Number(c.quantity));
+      c.amount && (c.amount = Number(c.amount));
+      c.discountedPercentage = Number(c.discountedPercentage);
+      c.discountedEachOff = Number(c.discountedEachOff);
       return c;
     });
     form.querySelector('input[name="conditions"]').value = JSON.stringify(conditionsData);
-    form.querySelector('input[name="startDate"]').value = startDate.value;
-    form.querySelector('input[name="endDate"]').value = endDate.value;
-
+    form.querySelector('input[name="startDate"]').value = new Date(startDate.value).toISOString();
+    form.querySelector('input[name="endDate"]').value = endDate.value ? new Date(endDate.value).toISOString() : '';
     form.submit();
   }
   return (

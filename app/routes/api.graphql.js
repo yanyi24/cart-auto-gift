@@ -28,6 +28,17 @@ async function collectionHasProduct({url, admin}) {
   return json({ success: true, data: data?.collection?.hasProduct });
 }
 
+async function getCurrencyCode({admin}) {
+  const response = await admin.graphql(`
+    query shopInfo {
+      shop {
+        currencyCode
+      }
+    }
+  `);
+  return json({ success: true, data: (await response.json()).data?.shop?.currencyCode });
+}
+
 export const loader = async ({ request }) => {
   const { admin } = await shopify.authenticate.admin(request);
 
@@ -35,6 +46,7 @@ export const loader = async ({ request }) => {
   const reqType =  url.searchParams.get('reqType');
 
   if(reqType === 'collectionHasProduct') return await collectionHasProduct({ url, admin })
+  if(reqType === 'getCurrencyCode') return await getCurrencyCode({ admin })
 
   return json({ data: null });
 
