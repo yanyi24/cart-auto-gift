@@ -68,8 +68,6 @@ export function run(input) {
     conditions.flatMap(c => c.products.flatMap(p => p.variants));
 
   const handleRule = (lines) => {
-    console.log('rule', rule);
-    console.log(JSON.stringify(lines));
     if (rule === 'QUANTITY') {
       // 根据筛选结果找到对应的条件
       const condition = findObjectByValue(conditions, lines.length);
