@@ -1,5 +1,18 @@
 import {
-  BlockStack, Box, Button, Card, Divider, InlineGrid, Layout, Page, PageActions, RadioButton, Select, Text, TextField
+  BlockStack,
+  Box,
+  Button,
+  Card,
+  Divider,
+  InlineGrid, InlineStack,
+  Layout,
+  Page,
+  PageActions,
+  RadioButton,
+  Select,
+  Tag,
+  Text,
+  TextField
 } from "@shopify/polaris";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -69,6 +82,8 @@ export const action = async ({ request }) => {
       type: "json",
       value: JSON.stringify(
         {
+          inCollectionIds: buys.type === 'COLLECTIONS' ? buys.value : [],
+          inTags: buys.type === 'TAGS' ? buys.value : [],
           buys,
           rule,
           conditions
@@ -123,6 +138,8 @@ export default function Discount() {
   const { isNew, currencyCode } = useLoaderData();
   const [title, setTitle] = useState('test');
   const [buyType, setBuyType] = useState('ALL_PRODUCTS');
+  const [currentTag, setCurrentTag] = useState('');
+  const [selectedTags, setSelectedTags] = useState([]);
   const [rule, setRule] = useState('QUANTITY');
   const [conditions, setConditions] = useState([{
     quantity: undefined,
@@ -144,13 +161,31 @@ export default function Discount() {
     { label: 'All products', value: 'ALL_PRODUCTS' },
     { label: 'Specific products', value: 'PRODUCTS' },
     { label: 'Specific collections', value: 'COLLECTIONS' },
+    { label: 'Products with specific tags', value: 'TAGS'}
   ];
 
   // Handle state change callbacks
   const handleTitleChange = useCallback((newValue) => setTitle(newValue), []);
+  const handleTagChange = useCallback((newValue) => setCurrentTag(newValue), []);
   const handleBuyTypeChange = useCallback(setBuyType, [setBuyType]);
   const handleRuleChange = useCallback((_, newValue) => setRule(newValue), []);
-
+  const removeTag = useCallback(
+    (tag) => () => {
+      setSelectedTags((previousTags) =>
+        previousTags.filter((previousTag) => previousTag !== tag),
+      );
+    },
+    [],
+  );
+  const addTag = function () {
+    if (!currentTag){
+      return;
+    }
+    setSelectedTags((previousTags) => {
+      return [...previousTags, currentTag.trim()];
+    });
+    setCurrentTag('');
+  }
   const updateConditionValue = useCallback((idx, newValue, type) => {
     setConditions((prev) => prev.map((c, i) => i === idx ? { ...c, [type]: newValue } : c));
   }, []);
@@ -194,7 +229,9 @@ export default function Discount() {
         variants: p.variants.map(v => removeGidStr(v.id))
       }));
     } else if (buyType === 'COLLECTIONS') {
-      buys.value = selectedBuysCollections.map(c => removeGidStr(c.id));
+      buys.value = selectedBuysCollections.map(c => c.id);
+    } else if (buyType === 'TAGS') {
+      buys.value = selectedTags;
     }
 
     form.querySelector('input[name="buys"]').value = JSON.stringify(buys);
@@ -215,6 +252,7 @@ export default function Discount() {
     form.querySelector('input[name="endDate"]').value = endDate.value ? new Date(endDate.value).toISOString() : '';
     form.submit();
   }
+
   return (
     <Page
       backAction={{ url: '/app/discounts' }}
@@ -252,7 +290,7 @@ export default function Discount() {
                   <Text variant="headingMd" as="h2">Customer buys</Text>
                   <Box paddingBlockEnd="100">
                     <Text as="p">Any items from</Text>
-                    <InlineGrid columns="2fr auto" gap={buyType === 'ALL_PRODUCTS' ? "0" : "200"}>
+                    <InlineGrid columns="2fr auto" gap={(buyType === 'PRODUCTS' || buyType === 'COLLECTIONS') ? "200" : "0"}>
                       <Select
                         label="Any items from"
                         labelHidden
@@ -261,11 +299,38 @@ export default function Discount() {
                         value={buyType}
                         name="buyType"
                       />
-                      {buyType !== 'ALL_PRODUCTS' && (
+                      {(buyType === 'PRODUCTS' || buyType === 'COLLECTIONS') && (
                         <Button onClick={handleSelectBuys}>Browse</Button>
                       )}
                     </InlineGrid>
                   </Box>
+                  {
+                    buyType === 'TAGS' && (
+                      <>
+                        <Box>
+                          <Text as="p">Add a tag</Text>
+                          <InlineGrid columns="2fr auto" gap="200">
+                            <TextField
+                              label="Add a tag"
+                              labelHidden
+                              value={currentTag}
+                              onChange={handleTagChange}
+                              placeholder="e.g. sales"
+                              autoComplete="off"
+                              onClearButtonClick={() => setCurrentTag('')}
+                              clearButton
+                            />
+                            <Button onClick={addTag} disabled={!currentTag}>Add</Button>
+                          </InlineGrid>
+                        </Box>
+                        <Box>
+                          <InlineStack gap="200">
+                            { selectedTags.map((option) => (<Tag key={option} onRemove={removeTag(option)}>{option}</Tag>)) }
+                          </InlineStack>
+                        </Box>
+                      </>
+                    )
+                  }
                   {
                     buyType === 'PRODUCTS' && (
                       <SelectedTargets
@@ -417,8 +482,7 @@ export default function Discount() {
                   </Box>
                   <Divider/>
                   <Box>
-                    <Button onClick={addCondition} accessibilityLabel="Add condition" variant="plain" icon={PlusIcon}>Add
-                      condition</Button>
+                    <Button onClick={addCondition} accessibilityLabel="Add another condition" variant="plain" icon={PlusIcon}>Add another condition</Button>
                   </Box>
                 </BlockStack>
               </Card>

@@ -19,3 +19,7 @@ description = "t:description"
   [extensions.ui.paths]
   create = "/"
   details = "/"
+
+[extensions.input.variables]
+namespace = "$app:auto-gift"
+key = "amount-configuration"
