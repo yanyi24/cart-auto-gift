@@ -3,7 +3,7 @@ import {
   Box,
   Button,
   Card,
-  Divider,
+  Divider, Icon,
   InlineGrid, InlineStack,
   Layout,
   Page,
@@ -12,12 +12,12 @@ import {
   Select,
   Tag,
   Text,
-  TextField
+  TextField, Tooltip
 } from "@shopify/polaris";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import {useCallback, useMemo, useState} from "react";
-import { DeleteIcon, PlusIcon } from "@shopify/polaris-icons";
+import {AlertCircleIcon, DeleteIcon, PlusIcon} from "@shopify/polaris-icons";
 import shopify from "../shopify.server.js";
 import CurrencySymbol from "../components/CurrencySymbol.jsx";
 import SelectedTargets from "../components/SelectedTargets.jsx";
@@ -64,10 +64,7 @@ export const loader = async ({ params, request }) => {
 export const action = async ({ request }) => {
   const { admin } = await shopify.authenticate.admin(request);
   const formData = await request.formData();
-  // https://yanyi-checkout.myshopify.com/products/the-collection-snowboard-oxygen 48647179534626
-  // https://yanyi-checkout.myshopify.com/products/the-collection-snowboard-liquid 48647179960610
-  // https://yanyi-checkout.myshopify.com/products/the-compare-at-price-snowboard?variant=48647179338018
-  //'48647179338018'
+
   const rule = formData.get('rule');
   const isNew = formData.get('isNew');
   const buys = JSON.parse(formData.get('buys'));
@@ -257,11 +254,16 @@ export default function Discount() {
     <Page
       backAction={{ url: '/app/discounts' }}
       title={isNew ? 'New discount' : 'Edit discount'}
-      primaryAction={{ content: 'Save', onAction: handleSave }}
     >
       <Layout>
         <Layout.Section>
-          <form method="post" id="discountForm">
+          <form
+            data-save-bar={true}
+            data-discard-confirmation={true}
+            method="post"
+            onSubmit={handleSave}
+            id="discountForm"
+          >
             <input type="hidden" name="isNew" value={isNew}/>
             <input type="hidden" name="buys"/>
             <input type="hidden" name="conditions"/>
@@ -298,6 +300,7 @@ export default function Discount() {
                         onChange={handleBuyTypeChange}
                         value={buyType}
                         name="buyType"
+                        helpText={buyType === 'TAGS' && 'Products will match if they contain any of the specified tags.'}
                       />
                       {(buyType === 'PRODUCTS' || buyType === 'COLLECTIONS') && (
                         <Button onClick={handleSelectBuys}>Browse</Button>
@@ -359,14 +362,32 @@ export default function Discount() {
                   <Text variant="headingMd" as="h2">Purchase rule</Text>
                   <Box>
                     <BlockStack>
-                      <RadioButton
-                        label="Minimum quantity of items"
-                        checked={rule === 'QUANTITY'}
-                        id="QUANTITY"
-                        name="rule"
-                        value="QUANTITY"
-                        onChange={handleRuleChange}
-                      />
+                      <InlineStack gap="100" blockAlign="center">
+                        <RadioButton
+                          label="Minimum total quantity"
+                          checked={rule === 'QUANTITY'}
+                          id="QUANTITY"
+                          name="rule"
+                          value="QUANTITY"
+                          onChange={handleRuleChange}
+                        />
+                        <Tooltip content="Requires the total number of items in the cart to meet or exceed a specified quantity, regardless of item types.">
+                          <Icon source={AlertCircleIcon} tone="base" />
+                        </Tooltip>
+                      </InlineStack>
+                      <InlineStack gap="100" blockAlign="center">
+                        <RadioButton
+                          label="Minimum unique items"
+                          checked={rule === 'UNIQUE'}
+                          id="UNIQUE"
+                          name="rule"
+                          value="UNIQUE"
+                          onChange={handleRuleChange}
+                        />
+                        <Tooltip content="Requires the number of unique item types in the cart to meet or exceed a specified number, regardless of quantity for each type.">
+                          <Icon source={AlertCircleIcon} tone="base" />
+                        </Tooltip>
+                      </InlineStack>
                       <RadioButton
                         label="Minimum purchase amount"
                         id="AMOUNT"
@@ -385,7 +406,7 @@ export default function Discount() {
                   <Text variant="headingMd" as="h2">Conditions</Text>
                   <Box>
                     <BlockStack>
-                      <Text as="p">{rule === 'QUANTITY' ? 'Quantity' : 'Amount'}</Text>
+                      <Text as="p">{rule === 'AMOUNT' ? 'Amount' : 'Quantity'}</Text>
                     </BlockStack>
                     <BlockStack gap="400">
                       {conditions.map((condition, idx) => (
@@ -393,7 +414,7 @@ export default function Discount() {
                         <Box key={idx}>
                           <Box paddingBlockEnd="300">
                             <InlineGrid columns="2fr auto auto" gap="200">
-                              {rule === 'QUANTITY' && (
+                              {(rule === 'QUANTITY' || rule === 'UNIQUE') && (
                                 <TextField
                                   autoComplete="off"
                                   type="number"
@@ -403,6 +424,7 @@ export default function Discount() {
                                   labelHidden
                                 />
                               )}
+
                               {rule === 'AMOUNT' && (
                                 <TextField
                                   autoComplete="off"
@@ -426,7 +448,7 @@ export default function Discount() {
                           />
                           <Box paddingBlockStart="300">
                             <BlockStack gap="200">
-                              <Text variant="headingSm" as="h2">Discount</Text>
+                              <Text variant="headingSm" as="h2">Discount value</Text>
                               <BlockStack>
                                 <RadioButton
                                   label="Free"
@@ -455,13 +477,13 @@ export default function Discount() {
                                   </Box>
                                 )}
                                 <RadioButton
-                                  label="Amount off each"
-                                  id={`EACH_OFF-${idx}`}
-                                  value="EACH_OFF"
-                                  checked={condition.discounted === 'EACH_OFF'}
-                                  onChange={() => updateConditionValue(idx, 'EACH_OFF', 'discounted')}
+                                  label="Fixed amount"
+                                  id={`FIXED_AMOUNT-${idx}`}
+                                  value="FIXED_AMOUNT"
+                                  checked={condition.discounted === 'FIXED_AMOUNT'}
+                                  onChange={() => updateConditionValue(idx, 'FIXED_AMOUNT', 'discounted')}
                                 />
-                                {condition.discounted === 'EACH_OFF' && (
+                                {condition.discounted === 'FIXED_AMOUNT' && (
                                   <Box paddingInlineStart="600" width="200px">
                                     <TextField
                                       label="Each off"
@@ -504,19 +526,7 @@ export default function Discount() {
           <Card />
         </Layout.Section>
       </Layout>
-      <PageActions
-        primaryAction={{
-          content: 'Save',
-          onAction: handleSave
-        }}
-        secondaryActions={[
-          {
-            content: 'Discard',
-            onAction: () => {
-            }
-          },
-        ]}
-      />
+
     </Page>
   );
 }

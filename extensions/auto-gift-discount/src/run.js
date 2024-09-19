@@ -22,6 +22,7 @@ export function run(input) {
   // 解析配置，获取配置中的买入规则、规则类型和条件
   const configuration = JSON.parse(input?.discountNode?.metafield?.value ?? "{}");
   const cartLines = input?.cart?.lines || [];
+  const currencyRate = Number(input?.presentmentCurrency) || 1;
   const { buys, rule, conditions } = configuration;
 
   // 如果配置中的必要字段不存在，则返回空折扣
@@ -35,7 +36,7 @@ export function run(input) {
       return { percentage: { value: '100' } }; // 全免折扣
     } else if (condition.discounted === "PERCENTAGE") {
       return { percentage: { value: condition.discountedPercentage } }; // 百分比折扣
-    } else if (condition.discounted === "EACH_OFF") {
+    } else if (condition.discounted === "FIXED_AMOUNT") {
       return { fixedAmount: { amount: condition.discountedEachOff, appliesToEachItem: true } }; // 每件商品固定折扣
     }
     return {};
@@ -49,6 +50,11 @@ export function run(input) {
   };
 
   // 应用折扣的函数，返回包含目标商品和折扣值的对象
+  /**
+   * @param {any} condition
+   * @param {CartLine[]} cartLines
+   * @returns {FunctionRunResult}
+   */
   const applyDiscount = (condition, cartLines) => {
     const getsIds = condition.products.flatMap(p => p.variants); // 获取条件中所有商品变体ID
     const targets = getTargets(cartLines, getsIds); // 筛选符合条件的商品
@@ -67,8 +73,20 @@ export function run(input) {
   const getAllGiftVariants = (conditions) =>
     conditions.flatMap(c => c.products.flatMap(p => p.variants));
 
+  /**
+   * @param {CartLine[]} lines
+   * @returns {FunctionRunResult}
+   */
   const handleRule = (lines) => {
     if (rule === 'QUANTITY') {
+      // 根据筛选结果找到对应的条件
+      const totalQuantity = lines.reduce((total, line) => total + line.quantity, 0);
+      const condition = findObjectByValue(conditions, totalQuantity);
+      if (!condition.quantity) return EMPTY_DISCOUNT; // 如果条件不满足数量要求，返回空折扣
+      return applyDiscount(condition, cartLines); // 应用折扣
+    }
+
+    if (rule === 'UNIQUE') {
       // 根据筛选结果找到对应的条件
       const condition = findObjectByValue(conditions, lines.length);
       if (!condition.quantity) return EMPTY_DISCOUNT; // 如果条件不满足数量要求，返回空折扣

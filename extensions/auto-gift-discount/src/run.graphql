@@ -24,6 +24,7 @@ query RunInput($inCollectionIds: [ID!]!, $inTags: [String!]!) {
       }
     }
   }
+  presentmentCurrencyRate
   discountNode {
     metafield(namespace: "$app:auto-gift", key: "amount-configuration") {
       value
