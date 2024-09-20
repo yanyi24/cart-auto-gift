@@ -113,17 +113,17 @@ export function run(input) {
     lines = cartLines.filter(line => !allGifts.includes(removeGidStr(line.merchandise.id)));
   }
 
-  if (buys.type === 'PRODUCTS') {
+  if (buys.type === 'PRODUCT') {
     const buysIds = buys.value.flatMap(p => p.variants); // 获取买入规则中的商品变体ID
     // 筛选购物车中包含买入规则商品的商品
     lines = cartLines.filter(line => buysIds.includes(removeGidStr(line.merchandise.id)));
   }
-  if (buys.type === 'COLLECTIONS') {
+  if (buys.type === 'COLLECTION') {
     // 筛选购物车中不包含礼品且在给定集合中的商品
     lines = cartLines.filter(line => (line.merchandise.product.inCollection && !allGifts.includes(removeGidStr(line.merchandise.id))));
   }
 
-  if (buys.type === 'TAGS') {
+  if (buys.type === 'FILTER') {
     const allGifts = getAllGiftVariants(conditions);
     // 筛选购物车中不包含礼品且包含给定tag的商品
     lines = cartLines.filter(line => (line.merchandise.product.inTags && !allGifts.includes(removeGidStr(line.merchandise.id))));

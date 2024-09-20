@@ -7,7 +7,6 @@ import {
   InlineGrid, InlineStack,
   Layout,
   Page,
-  PageActions,
   RadioButton,
   Select,
   Tag,
@@ -24,6 +23,7 @@ import SelectedTargets from "../components/SelectedTargets.jsx";
 import {ActiveDatesCard } from "@shopify/discount-app-components";
 import {useField} from "@shopify/react-form";
 import {removeGidStr} from "../utils.js";
+import CustomerBuys from "../components/CustomerBuys.jsx";
 
 let functionId = null, isNew = false;
 export const loader = async ({ params, request }) => {
@@ -350,7 +350,10 @@ export default function Discount() {
     form.querySelector('input[name="endDate"]').value = endDate.value ? new Date(endDate.value).toISOString() : '';
     form.submit();
   }
-
+  const [buys, setBuys] = useState({ type: 'ALL_PRODUCTS', value: {} });
+  const handleBuysChange = (newBuys) => {
+    setBuys(newBuys);
+  };
   return (
     <Page
       backAction={{ url: '/app/discounts' }}
@@ -387,74 +390,12 @@ export default function Discount() {
               </Card>
 
               {/* Customer Buys Section */}
-              <Card>
-                <BlockStack gap="200">
-                  <Text variant="headingMd" as="h2">Customer buys</Text>
-                  <Box paddingBlockEnd="100">
-                    <Text as="p">Any items from</Text>
-                    <InlineGrid columns="2fr auto" gap={(buyType === 'PRODUCTS' || buyType === 'COLLECTIONS') ? "200" : "0"}>
-                      <Select
-                        label="Any items from"
-                        labelHidden
-                        options={buyTypeOptions}
-                        onChange={handleBuyTypeChange}
-                        value={buyType}
-                        name="buyType"
-                        helpText={buyType === 'TAGS' && 'Products will match if they contain any of the specified tags.'}
-                      />
-                      {(buyType === 'PRODUCTS' || buyType === 'COLLECTIONS') && (
-                        <Button onClick={handleSelectBuys}>Browse</Button>
-                      )}
-                    </InlineGrid>
-                  </Box>
-                  {
-                    buyType === 'TAGS' && (
-                      <>
-                        <Box>
-                          <Text as="p">Add a tag</Text>
-                          <InlineGrid columns="2fr auto" gap="200">
-                            <TextField
-                              label="Add a tag"
-                              labelHidden
-                              value={currentTag}
-                              onChange={handleTagChange}
-                              placeholder="e.g. sales"
-                              autoComplete="off"
-                              onClearButtonClick={() => setCurrentTag('')}
-                              clearButton
-                            />
-                            <Button onClick={addTag} disabled={!currentTag}>Add</Button>
-                          </InlineGrid>
-                        </Box>
-                        <Box>
-                          <InlineStack gap="200">
-                            { selectedTags.map((option) => (<Tag key={option} onRemove={removeTag(option)}>{option}</Tag>)) }
-                          </InlineStack>
-                        </Box>
-                      </>
-                    )
-                  }
-                  {
-                    buyType === 'PRODUCTS' && (
-                      <SelectedTargets
-                        products={selectedBuysProducts}
-                        onRemove={(id) => setSelectedBuysProducts(selectedBuysProducts.filter((p) => p.id !== id))}
-                        onEdit={handleSelectBuys}
-                        currencyCode={currencyCode}
-                      />
-                    )
-                  }
-                  {
-                    buyType === 'COLLECTIONS' && (
-                      <SelectedTargets
-                        collections={selectedBuysCollections}
-                        onRemove={(id) => setSelectedBuysCollections(selectedBuysCollections.filter((c) => c.id !== id))}
-                        currencyCode={currencyCode}
-                      />
-                    )
-                  }
-                </BlockStack>
-              </Card>
+              <CustomerBuys
+                onChange={handleBuysChange}
+                currencyCode={currencyCode}
+                initialBuyType={buys.type}
+                initialBuysValue={buys.value}
+              />
 
               {/* Purchase Conditions Section */}
               <Card>

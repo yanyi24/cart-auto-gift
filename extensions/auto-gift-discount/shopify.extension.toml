@@ -17,8 +17,8 @@ description = "t:description"
   path = "dist/function.wasm"
 
   [extensions.ui.paths]
-  create = "/"
-  details = "/"
+  create = "/app/:functionId/new"
+  details = "/app/:functionId/:id"
 
 [extensions.input.variables]
 namespace = "$app:auto-gift"
