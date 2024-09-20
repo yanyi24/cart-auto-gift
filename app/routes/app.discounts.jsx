@@ -29,14 +29,14 @@ export default function AppDiscounts() {
       title="Discounts"
       primaryAction={{
         content: 'Create discount',
-        url: '/app/discounts/new'
+        url: '/app/null/new'
       }}
     >
       <Layout>
         <Layout.Section>
           <Card>
             {discounts.length ? null : (
-              <EmptySurveyState onAction={() => navigate('/app/discount/new')} />
+              <EmptySurveyState onAction={() => navigate('/app/null/new')} />
             ) }
           </Card>
         </Layout.Section>
