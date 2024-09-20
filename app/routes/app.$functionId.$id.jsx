@@ -16,7 +16,7 @@ import {
 } from "@shopify/polaris";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import {useCallback, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {AlertCircleIcon, DeleteIcon, PlusIcon} from "@shopify/polaris-icons";
 import shopify from "../shopify.server.js";
 import CurrencySymbol from "../components/CurrencySymbol.jsx";
@@ -25,38 +25,82 @@ import {ActiveDatesCard } from "@shopify/discount-app-components";
 import {useField} from "@shopify/react-form";
 import {removeGidStr} from "../utils.js";
 
-let functionId = null;
+let functionId = null, isNew = false;
 export const loader = async ({ params, request }) => {
   const { admin } = await shopify.authenticate.admin(request);
+  const paramsFunctionId = params.functionId;
+  const discountId = params.id;
+  isNew = discountId === 'new';
 
   const response = await admin.graphql(`
+    #graphql
     query shopInfo {
       shop {
         currencyCode
       }
     }
   `);
-  const functionsRes = await admin.graphql(`
-    query functionsInfo {
-      shopifyFunctions(first: 250){
-        nodes{
-          app{
-            handle
+  const { data } = await response.json();
+
+  if (paramsFunctionId === 'null') {
+    const functionsRes = await admin.graphql(`
+      #graphql
+      query functionsInfo {
+        shopifyFunctions(first: 250){
+          nodes{
+            app{
+              handle
+            }
+            apiType
+            title
+            id
           }
-          apiType
-          title
-          id
         }
       }
-    }
-  `);
+    `);
+    const functions = await functionsRes.json();
+    functionId = functions.data?.shopifyFunctions?.nodes.find(node => (node.apiType === 'product_discounts' && node.app.handle === 'cart-auto-gift'))?.id;
+  } else {
+    functionId = paramsFunctionId;
+  }
 
-  const { data } = await response.json();
-  const functions = await functionsRes.json();
-  functionId = functions.data?.shopifyFunctions?.nodes.find(node => (node.apiType === 'product_discounts' && node.app.handle === 'cart-auto-gift'))?.id;
+  let discountInfo = null;
+  if (!isNew) {
+    const discountRes = await admin.graphql(`
+      #graphql
+      query queryDiscountById($id: ID!) {
+        discountInfo: discountNode(id: $id) {
+          id
+          metafield(key: "amount-configuration", namespace: "$app:auto-gift") {
+            value
+          }
+          discount {
+            ... on DiscountAutomaticApp {
+              endsAt
+              asyncUsageCount
+              combinesWith {
+                orderDiscounts
+                productDiscounts
+                shippingDiscounts
+              }
+              startsAt
+              status
+              title
+              updatedAt
+            }
+          }
+        }
+      }`, {
+      variables: {
+        id: `gid://shopify/DiscountAutomaticNode/${discountId}`
+      }
+    });
+    const discount = await discountRes.json();
+    discountInfo = discount.data?.discountInfo;
+  }
   return json({
-    isNew: params.id === 'new',
     currencyCode: data?.shop?.currencyCode,
+    discountInfo: discountInfo
   });
 };
 
@@ -66,7 +110,6 @@ export const action = async ({ request }) => {
   const formData = await request.formData();
 
   const rule = formData.get('rule');
-  const isNew = formData.get('isNew');
   const buys = JSON.parse(formData.get('buys'));
   const startsAt = formData.get('startDate');
   const endsAt = formData.get('endDate') || null;
@@ -99,9 +142,9 @@ export const action = async ({ request }) => {
       shippingDiscounts: true,
     }
   };
-  console.log(baseDiscount)
-  const response = await admin.graphql(
-      `#graphql
+
+  const response = await admin.graphql(`
+    #graphql
     mutation CreateAutomaticDiscount($discount: DiscountAutomaticAppInput!) {
       discountCreate: discountAutomaticAppCreate(automaticAppDiscount: $discount) {
         automaticAppDiscount {
@@ -128,12 +171,27 @@ export const action = async ({ request }) => {
   const errors = responseJson.data.discountCreate?.userErrors;
   const discount = responseJson.data.discountCreate?.automaticAppDiscount;
   console.log({errors, discount})
-  return null;
+  if (errors?.length) {
+    return json({
+      errors: errors.map((error) => ({
+        message: error.message,
+        field: error.field,
+      })),
+    }, { status: 400 });
+  } else {
+    return json({
+      discountId: discount.discountId,
+      success: true,
+    });
+  }
 };
 
 export default function Discount() {
-  const { isNew, currencyCode } = useLoaderData();
-  const [title, setTitle] = useState('test');
+  const { currencyCode, discountInfo } = useLoaderData();
+  const discountMetafield = JSON.parse(discountInfo?.metafield?.value || "{}") ;
+  const discountData = discountInfo?.discount || {};
+
+  const [title, setTitle] = useState('');
   const [buyType, setBuyType] = useState('ALL_PRODUCTS');
   const [currentTag, setCurrentTag] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
@@ -152,6 +210,49 @@ export default function Discount() {
 
   const startDate = useField(todayDate);
   const endDate = useField(null);
+
+
+  useEffect(() => {
+    if (discountInfo) {
+      setTitle(discountData.title || '');
+      setBuyType(discountMetafield?.buys?.type || 'ALL_PRODUCTS');
+
+      // 填充选中的产品或集合
+      if (discountMetafield?.buys?.type === 'PRODUCTS') {
+        setSelectedBuysProducts(discountMetafield.buys.value || []);
+      } else if (discountMetafield?.buys?.type === 'COLLECTIONS') {
+        setSelectedBuysCollections(discountMetafield.buys.value || []);
+      } else if (discountMetafield?.buys?.type === 'TAGS') {
+        setSelectedTags(discountMetafield.buys.value || []);
+      }
+
+      if (discountMetafield?.rule === 'QUANTITY') {
+        discountMetafield.conditions.forEach(condition => condition.amount = undefined);
+      } else if (discountMetafield?.rule === 'AMOUNT'){
+        discountMetafield.conditions.forEach(condition => condition.quantity = undefined);
+      }
+      // 填充条件
+      setConditions(discountMetafield.conditions || [{
+        quantity: undefined,
+        amount: undefined,
+        products: [],
+        discounted: 'FREE',
+        discountedPercentage: '',
+        discountedEachOff: ''
+      }]);
+
+      // 设置开始和结束日期
+      if (discountData.startsAt) {
+        startDate.onChange(new Date(discountData.startsAt));
+      }
+      if (discountData.endsAt) {
+        endDate.onChange(new Date(discountData.endsAt));
+      }
+
+      // 设置规则
+      setRule(discountMetafield.rule || 'QUANTITY');
+    }
+  }, [discountInfo]);
 
   // Options for Select dropdown
   const buyTypeOptions = [
@@ -253,7 +354,7 @@ export default function Discount() {
   return (
     <Page
       backAction={{ url: '/app/discounts' }}
-      title={isNew ? 'New discount' : 'Edit discount'}
+      title='New discount'
     >
       <Layout>
         <Layout.Section>
@@ -264,7 +365,6 @@ export default function Discount() {
             onSubmit={handleSave}
             id="discountForm"
           >
-            <input type="hidden" name="isNew" value={isNew}/>
             <input type="hidden" name="buys"/>
             <input type="hidden" name="conditions"/>
             <input type="hidden" name="startDate"/>
@@ -511,15 +611,12 @@ export default function Discount() {
 
             </BlockStack>
             <Box paddingBlockStart="400">
-
               <ActiveDatesCard
                 startDate={startDate}
                 endDate={endDate}
                 timezoneAbbreviation="EST"
               />
             </Box>
-
-
           </form>
         </Layout.Section>
         <Layout.Section variant="oneThird">
@@ -536,7 +633,10 @@ async function resourcePicker({ type, selectionIds }) {
     type,
     action: 'add',
     multiple: true,
-    selectionIds
+    selectionIds,
+    filter: {
+      draft: false
+    }
   });
 }
 
