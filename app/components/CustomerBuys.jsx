@@ -6,14 +6,12 @@ import {
   InlineGrid,
   InlineStack,
   Select,
-  Tag,
-  TextField,
   Text,
-  Card,
-  Divider, ChoiceList, RadioButton, Popover, OptionList
+  Card, RadioButton,
 } from "@shopify/polaris";
 import SelectedTargets from "../components/SelectedTargets.jsx";
-import {ProductFilterConditions, ProductFilterOperators, resourcePicker} from "../utils.js";
+import {resourcePicker} from "../utils.js";
+import ConditionSelector from "./ConditionSelector.jsx";
 
 export default function CustomerBuys({ onChange, initialBuyType = 'ALL_PRODUCTS', initialBuysValue = {}, currencyCode }) {
   const [buyType, setBuyType] = useState(initialBuyType);
@@ -41,7 +39,6 @@ export default function CustomerBuys({ onChange, initialBuyType = 'ALL_PRODUCTS'
   }, [buyType, selectedProducts, selectedCollections]);
 
 
-
   // 处理产品和集合的选择
   const handleSelectResource = async (type) => {
     const data = await resourcePicker({ type: type.toLowerCase(), selectionIds: [] });
@@ -67,35 +64,15 @@ export default function CustomerBuys({ onChange, initialBuyType = 'ALL_PRODUCTS'
     (_, newValue) => setFilterType(newValue),
     [],
   );
-  const [conditionExpanded, setConditionExpanded] = useState(false);
-  const [operatorExpanded, setOperatorExpanded] = useState(false);
-  const [conditionPopoverActive, setConditionPopoverActive] = useState(false);
-  const [selected, setSelected] = useState([ProductFilterConditions[0].value]);
-  const [conditionType, setConditionType] = useState(ProductFilterConditions[0].label);
-  const toggleConditionPopoverActive = useCallback(
-    () => {
-      setConditionPopoverActive((popoverActive) => !popoverActive);
-      setConditionExpanded(!conditionExpanded)
-    },
-    [conditionExpanded],
-  );
-  const handleConditionChange = useCallback((v) => {
-    setSelected(v);
-    setConditionPopoverActive(false);
-    setConditionExpanded(false);
-    const {label} = ProductFilterConditions.find(item => item.value === v[0]);
-    setConditionType(label);
-  }, []);
-  const activator = (
-    <Button
-      fullWidth
-      textAlign="left"
-      disclosure={conditionExpanded ? 'up' : 'down'}
-      onClick={toggleConditionPopoverActive}
-    >
-      {conditionType}
-    </Button>
-  );
+
+  const [, setConditionData] = useState({
+    condition: '',
+    operator: '',
+    value: ''
+  });
+  const handleConditionDataChange = (newData) => {
+    setConditionData(newData);
+  }
   return (
     <Card>
       <BlockStack gap="200">
@@ -146,29 +123,10 @@ export default function CustomerBuys({ onChange, initialBuyType = 'ALL_PRODUCTS'
             </BlockStack>
             <BlockStack gap="100">
               <InlineGrid columns="1fr 1fr 1fr" gap="200">
-                <Popover
-                  active={conditionPopoverActive}
-                  activator={activator}
-                  autofocusTarget="first-node"
-                  preferredPosition="above"
-                  preferredAlignment="left"
-                  onClose={toggleConditionPopoverActive}
-                >
-                  <OptionList
-                    allowMultiple={false}
-                    onChange={handleConditionChange}
-                    options={ProductFilterConditions}
-                    selected={selected}
-                  />
-                </Popover>
-                <Button
-                  fullWidth
-                  textAlign="left"
-                  disclosure={operatorExpanded ? 'up' : 'down'}
-                  onClick={() => setOperatorExpanded(!operatorExpanded)}
-                >
-                  {operatorExpanded ? 'Show less' : 'Show more'}
-                </Button>
+                <ConditionSelector
+                  currencyCode={currencyCode}
+                  onChange={handleConditionDataChange}
+                />
               </InlineGrid>
             </BlockStack>
           </>

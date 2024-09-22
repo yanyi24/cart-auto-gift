@@ -10,7 +10,7 @@ export const ProductFilterConditions = [
   { label: 'Title',           value: 'title',   operators: [0, 1, 2, 3, 4, 5] },
   { label: 'Type',            value: 'type',    operators: [0, 1, 2, 3, 4, 5] },
   { label: 'Vendor',          value: 'vendor',  operators: [0, 1, 2, 3, 4, 5] },
-  { label: 'Tag',             value: 'label',   operators: [0]                },
+  { label: 'Tag',             value: 'tag',     operators: [0],               },
   { label: 'Price',           value: 'price',   operators: [0, 1, 6, 7]       },
   { label: 'Weight',          value: 'weight',  operators: [0, 1, 6, 7]       },
   { label: "Variant's title", value: 'v_title', operators: [0, 1, 2, 3, 4, 5] },
