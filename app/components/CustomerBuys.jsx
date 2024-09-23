@@ -80,6 +80,7 @@ export default function CustomerBuys({
   });
   const handleConditionDataChange = (newData) => {
     setConditionData(newData);
+    console.log(newData)
   }
   return (
     <Card>
@@ -129,16 +130,14 @@ export default function CustomerBuys({
               </Box>
             </BlockStack>
             <BlockStack gap="100">
-              <InlineGrid columns="1fr 1fr 1fr" gap="200">
-                <ConditionSelector
-                  currencyCode={currencyCode}
-                  weightUnit={weightUnit}
-                  shopTags={shopTags}
-                  shopVendors={shopVendors}
-                  shopTypes={shopTypes}
-                  onChange={handleConditionDataChange}
-                />
-              </InlineGrid>
+              <ConditionSelector
+                currencyCode={currencyCode}
+                weightUnit={weightUnit}
+                shopTags={shopTags}
+                shopVendors={shopVendors}
+                shopTypes={shopTypes}
+                onChange={handleConditionDataChange}
+              />
             </BlockStack>
           </>
         )}
