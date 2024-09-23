@@ -8,8 +8,6 @@ import {
   Layout,
   Page,
   RadioButton,
-  Select,
-  Tag,
   Text,
   TextField, Tooltip
 } from "@shopify/polaris";
@@ -36,7 +34,23 @@ export const loader = async ({ params, request }) => {
     #graphql
     query shopInfo {
       shop {
+        weightUnit
         currencyCode
+        vendors: productVendors(first:100){
+          edges{
+            node
+          }
+        }
+        tags: productTags(first: 100) {
+          edges {
+            node
+          }
+        }
+        types: productTypes(first: 100) {
+          edges {
+            node
+          }
+        }
       }
     }
   `);
@@ -100,6 +114,16 @@ export const loader = async ({ params, request }) => {
   }
   return json({
     currencyCode: data?.shop?.currencyCode,
+    weightUnit: data?.shop?.weightUnit,
+    shopVendors: data?.shop?.vendors?.edges?.map(i => {
+      return { label: i.node, value: i.node }
+    }),
+    shopTags: data?.shop?.tags?.edges?.map(i => {
+      return { label: i.node, value: i.node }
+    }),
+    shopTypes: data?.shop?.types?.edges?.map(i => {
+      return { label: i.node, value: i.node }
+    }),
     discountInfo: discountInfo
   });
 };
@@ -187,13 +211,12 @@ export const action = async ({ request }) => {
 };
 
 export default function Discount() {
-  const { currencyCode, discountInfo } = useLoaderData();
+  const { currencyCode, weightUnit, shopVendors, shopTags, shopTypes, discountInfo } = useLoaderData();
   const discountMetafield = JSON.parse(discountInfo?.metafield?.value || "{}") ;
   const discountData = discountInfo?.discount || {};
 
   const [title, setTitle] = useState('');
   const [buyType, setBuyType] = useState('ALL_PRODUCTS');
-  const [currentTag, setCurrentTag] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [rule, setRule] = useState('QUANTITY');
   const [conditions, setConditions] = useState([{
@@ -254,36 +277,10 @@ export default function Discount() {
     }
   }, [discountInfo]);
 
-  // Options for Select dropdown
-  const buyTypeOptions = [
-    { label: 'All products', value: 'ALL_PRODUCTS' },
-    { label: 'Specific products', value: 'PRODUCTS' },
-    { label: 'Specific collections', value: 'COLLECTIONS' },
-    { label: 'Products with specific tags', value: 'TAGS'}
-  ];
 
   // Handle state change callbacks
   const handleTitleChange = useCallback((newValue) => setTitle(newValue), []);
-  const handleTagChange = useCallback((newValue) => setCurrentTag(newValue), []);
-  const handleBuyTypeChange = useCallback(setBuyType, [setBuyType]);
   const handleRuleChange = useCallback((_, newValue) => setRule(newValue), []);
-  const removeTag = useCallback(
-    (tag) => () => {
-      setSelectedTags((previousTags) =>
-        previousTags.filter((previousTag) => previousTag !== tag),
-      );
-    },
-    [],
-  );
-  const addTag = function () {
-    if (!currentTag){
-      return;
-    }
-    setSelectedTags((previousTags) => {
-      return [...previousTags, currentTag.trim()];
-    });
-    setCurrentTag('');
-  }
   const updateConditionValue = useCallback((idx, newValue, type) => {
     setConditions((prev) => prev.map((c, i) => i === idx ? { ...c, [type]: newValue } : c));
   }, []);
@@ -302,7 +299,6 @@ export default function Discount() {
     }
   }
 
-  const handleSelectBuys = () => handleResourceSelect(buyType === 'COLLECTIONS' ? 'collection' : 'product', buyType === 'COLLECTIONS' ? selectedBuysCollections : selectedBuysProducts);
   const handleSelectGets = (idx) => handleResourceSelect('product', conditions[idx].products, idx);
 
   // Handle adding/removing conditions
@@ -391,8 +387,12 @@ export default function Discount() {
 
               {/* Customer Buys Section */}
               <CustomerBuys
-                onChange={handleBuysChange}
                 currencyCode={currencyCode}
+                weightUnit={weightUnit}
+                shopTags={shopTags}
+                shopVendors={shopVendors}
+                shopTypes={shopTypes}
+                onChange={handleBuysChange}
                 initialBuyType={buys.type}
                 initialBuysValue={buys.value}
               />

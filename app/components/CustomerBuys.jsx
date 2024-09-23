@@ -13,12 +13,20 @@ import SelectedTargets from "../components/SelectedTargets.jsx";
 import {resourcePicker} from "../utils.js";
 import ConditionSelector from "./ConditionSelector.jsx";
 
-export default function CustomerBuys({ onChange, initialBuyType = 'ALL_PRODUCTS', initialBuysValue = {}, currencyCode }) {
+export default function CustomerBuys({
+                                       onChange,
+                                       initialBuyType = 'ALL_PRODUCTS',
+                                       initialBuysValue = {},
+                                       currencyCode,
+                                       weightUnit,
+                                       shopTags,
+                                       shopVendors,
+                                       shopTypes
+}) {
   const [buyType, setBuyType] = useState(initialBuyType);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [selectedCollections, setSelectedCollections] = useState([]);
 
-  // 更新 buyType 时重置相关数据
   useEffect(() => {
 
     handleBuysChange();
@@ -86,7 +94,6 @@ export default function CustomerBuys({ onChange, initialBuyType = 'ALL_PRODUCTS'
               options={buyTypeOptions}
               onChange={(newValue) => {
                 setBuyType(newValue);
-                console.log(selectedProducts)
               }}
               value={buyType}
               name="buyType"
@@ -125,6 +132,10 @@ export default function CustomerBuys({ onChange, initialBuyType = 'ALL_PRODUCTS'
               <InlineGrid columns="1fr 1fr 1fr" gap="200">
                 <ConditionSelector
                   currencyCode={currencyCode}
+                  weightUnit={weightUnit}
+                  shopTags={shopTags}
+                  shopVendors={shopVendors}
+                  shopTypes={shopTypes}
                   onChange={handleConditionDataChange}
                 />
               </InlineGrid>

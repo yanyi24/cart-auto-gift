@@ -16,7 +16,13 @@ query RunInput($inCollectionIds: [ID!]!, $inTags: [String!]!) {
       merchandise{
         ... on ProductVariant{
           id
+          title
+          weight
+          weightUnit
           product {
+            title
+            productType
+            vendor
             inCollection: inAnyCollection(ids: $inCollectionIds)
             inTags: hasAnyTag(tags: $inTags)
           }
