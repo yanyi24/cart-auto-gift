@@ -36,17 +36,17 @@ export const loader = async ({ params, request }) => {
       shop {
         weightUnit
         currencyCode
-        vendors: productVendors(first:100){
+        vendors: productVendors(first:250){
           edges{
             node
           }
         }
-        tags: productTags(first: 100) {
+        tags: productTags(first: 250) {
           edges {
             node
           }
         }
-        types: productTypes(first: 100) {
+        types: productTypes(first: 250) {
           edges {
             node
           }

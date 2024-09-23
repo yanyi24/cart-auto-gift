@@ -17,18 +17,41 @@ export default function ConditionSelector({
                                           }){
 
   const [conditionExpanded, setConditionExpanded] = useState(false);
-  const [operatorExpanded, setOperatorExpanded] = useState(false);
   const [conditionPopoverActive, setConditionPopoverActive] = useState(false);
-  const [operatorPopoverActive, setOperatorPopoverActive] = useState(false);
-  const [valuePopoverActive, setValuePopoverActive] = useState(false);
   const [condition, setCondition] = useState(initialCondition);
   const [conditionLabel, setConditionLabel] = useState('Tag');
+
+  const [operatorExpanded, setOperatorExpanded] = useState(false);
+  const [operatorPopoverActive, setOperatorPopoverActive] = useState(false);
   const [operator, setOperator] = useState(initialOperator);
-  const [valuePopover, setValuePopover] = useState([initialValue]);
-  const [value, setValue] = useState(initialValue);
   const [operatorLabel, setOperatorLabel] = useState('is equal to');
   const [operatorList, setOperatorList] = useState([{ label: 'is equal to', value: 'equal'}]);
+
+  const [valuePopoverActive, setValuePopoverActive] = useState(false);
+  const [valuePopover, setValuePopover] = useState([initialValue]);
+
+  const [value, setValue] = useState(initialValue);
   const [valueList, setValueList] = useState(shopTags);
+
+
+  // 统一处理 onChange
+  const handleChange = (condition, operator, value) => {
+    if (value) {
+      onChange({ condition, operator, value });
+    }
+  };
+  const createActivator = (expanded, label, toggleActive) => {
+    return (
+      <Button
+        fullWidth
+        textAlign="left"
+        disclosure={expanded ? 'up' : 'down'}
+        onClick={toggleActive}
+      >
+        {label}
+      </Button>
+    )
+  }
 
   useEffect(() => {
     const {label, operators} = ProductFilterConditions.find(i => i.value === initialCondition[0]);
@@ -42,69 +65,62 @@ export default function ConditionSelector({
 
   const toggleConditionPopoverActive = useCallback(
     () => {
-      setConditionPopoverActive((popoverActive) => !popoverActive);
+      setConditionPopoverActive((active) => !active);
       setConditionExpanded(!conditionExpanded)
     },
     [conditionExpanded],
   );
-  const toggleOperatorPopoverActive = useCallback(
-    () => {
-      setOperatorPopoverActive((popoverActive) => !popoverActive);
-      setOperatorExpanded(!operatorExpanded)
-    },
-    [operatorExpanded],
-  );
-  const toggleValuePopoverActive = useCallback(
-    () => {
-      setValuePopoverActive((popoverActive) => !popoverActive);
-    },
-    [operatorExpanded],
-  );
-
   const handleConditionChange = useCallback((v) => {
+    const currentCondition = v[0];
+    const {label, operators} = ProductFilterConditions.find(item => item.value === currentCondition);
+
     setCondition(v);
     setConditionPopoverActive(false);
     setConditionExpanded(false);
-
-    const {label, operators} = ProductFilterConditions.find(item => item.value === v[0]);
     setConditionLabel(label);
+
     const newOperatorList = operators.map(i => ProductFilterOperators[i]);
     setOperatorList(newOperatorList);
     setOperatorLabel(newOperatorList[0].label);
     setOperator([newOperatorList[0].value]);
-    switch (v[0]) {
-      case 'tag':
-        setValueList(shopTags);
-        break;
-      case 'vendor':
-        setValueList(shopVendors);
-        break;
-      case 'type':
-        setValueList(shopTypes);
-        break;
-      default:
-        setValueList([]);
-    }
+    setValueList(currentCondition === 'tag' ? shopTags : currentCondition === 'vendor' ? shopVendors : shopTypes);
     setValue('');
 
-    value && onChange({ condition: v[0], operator: operator[0], value });
-  }, [shopTypes, onChange, operator, shopTags, shopVendors, value]);
+    handleChange(currentCondition, operator[0], value);
+  }, [shopTypes, operator, shopTags, shopVendors, value]);
 
+  const toggleOperatorPopoverActive = useCallback(
+    () => {
+      setOperatorPopoverActive((active) => !active);
+      setOperatorExpanded(!operatorExpanded)
+    },
+    [operatorExpanded],
+  );
   const handleOperatorChange = useCallback((v) => {
     setOperator(v);
+
     const selectedOperator = operatorList.find(i => i.value === v[0]);
     setOperatorLabel(selectedOperator.label);
     setOperatorPopoverActive(false);
     setOperatorExpanded(false);
 
-    value && onChange({ condition: condition[0], operator: v[0], value });
-  }, [condition, onChange, operatorList, value]);
+    handleChange(condition[0], v[0], value);
+  }, [condition, operatorList, value]);
+
+  const toggleValuePopoverActive = useCallback(
+    () => {
+      setValuePopoverActive((active) => !active);
+    },
+    [operatorExpanded],
+  );
+
+
   const handlePopValueChange = useCallback((v) => {
     setValue(v[0]);
     setValuePopoverActive(false);
     setValuePopover(v);
-    onChange({ condition: condition[0], operator: operator[0], value: v[0] });
-  }, [condition, onChange, operator]);
+    handleChange(condition[0], operator[0], v[0]);
+  }, [condition, operator]);
 
   const handleValueChange = useCallback((newValue) => {
     setValue(newValue);
@@ -135,8 +151,8 @@ export default function ConditionSelector({
     }
     setValuePopoverActive(newValueList.length !== 0);
     setValueList(newValueList);
-    onChange({ condition: condition[0], operator: operator[0], value });
-  }, [condition, onChange, operator, shopTags, shopTypes, shopVendors, value]);
+    handleChange(condition[0], operator[0], value);
+  }, [condition, operator, shopTags, shopTypes, shopVendors, value]);
 
   const handleValueFocus = useCallback(() => {
     if ((condition[0] === 'tag' || condition[0] === 'vendor' || condition[0] === 'type') && valueList.length > 0){
@@ -144,26 +160,7 @@ export default function ConditionSelector({
     }
   }, [condition, valueList]);
 
-  const conditionActivator = (
-    <Button
-      fullWidth
-      textAlign="left"
-      disclosure={conditionExpanded ? 'up' : 'down'}
-      onClick={toggleConditionPopoverActive}
-    >
-      {conditionLabel}
-    </Button>
-  );
-  const operatorActivator = (
-    <Button
-      fullWidth
-      textAlign="left"
-      disclosure={operatorExpanded ? 'up' : 'down'}
-      onClick={toggleOperatorPopoverActive}
-    >
-      {operatorLabel}
-    </Button>
-  );
+
   const valueActivator = (
     <TextField
       label="Condition value"
@@ -182,7 +179,7 @@ export default function ConditionSelector({
     <>
       <Popover
         active={conditionPopoverActive}
-        activator={conditionActivator}
+        activator={createActivator(conditionExpanded, conditionLabel, toggleConditionPopoverActive)}
         autofocusTarget="first-node"
         preferredPosition="above"
         preferredAlignment="left"
@@ -197,7 +194,7 @@ export default function ConditionSelector({
       </Popover>
       <Popover
         active={operatorPopoverActive}
-        activator={operatorActivator}
+        activator={createActivator(operatorExpanded, operatorLabel, toggleOperatorPopoverActive)}
         autofocusTarget="first-node"
         preferredPosition="above"
         preferredAlignment="left"
@@ -227,3 +224,4 @@ export default function ConditionSelector({
     </>
   )
 }
+
