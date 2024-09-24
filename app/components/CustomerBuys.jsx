@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   BlockStack,
   Box,
@@ -7,55 +7,38 @@ import {
   InlineStack,
   Select,
   Text,
-  Card, RadioButton,
+  Card,
+  RadioButton,
 } from "@shopify/polaris";
 import SelectedTargets from "../components/SelectedTargets.jsx";
-import {resourcePicker} from "../utils.js";
+import {removeGidStr, resourcePicker} from "../utils.js";
 import ConditionSelector from "./ConditionSelector.jsx";
 
 export default function CustomerBuys({
                                        onChange,
-                                       initialBuyType = 'ALL_PRODUCTS',
-                                       initialBuysValue = {},
+                                       buys,
                                        currencyCode,
                                        weightUnit,
                                        shopTags,
                                        shopVendors,
-                                       shopTypes
-}) {
-  const [buyType, setBuyType] = useState(initialBuyType);
+                                       shopTypes,
+                                     }) {
+  const [buyType, setBuyType] = useState(buys.type);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [selectedCollections, setSelectedCollections] = useState([]);
-
-  useEffect(() => {
-
-    handleBuysChange();
-  }, [buyType]);
-
-  // 处理 buys 变化
-  const handleBuysChange = useCallback(() => {
-    let value = [];
-    if (buyType === 'PRODUCT') {
-      value = selectedProducts;
-    } else if (buyType === 'COLLECTION') {
-      value = selectedCollections;
-    } else if (buyType === 'TAG') {
-    }
-
-    // 将最终的 type 和 value 传递给父组件
-    // onChange({ type: buyType, value });
-  }, [buyType, selectedProducts, selectedCollections]);
+  const [conditionData, setConditionData] = useState({
+    condition: '',
+    operator: '',
+    value: '',
+  });
 
 
-  // 处理产品和集合的选择
+  // 处理产品和集合的选择逻辑
   const handleSelectResource = async (type) => {
-    const data = await resourcePicker({ type: type.toLowerCase(), selectionIds: [] });
+    const data = await resourcePicker({ type: type.toLowerCase(), selectionIds: type === 'product' ? selectedProducts : selectedCollections });
     if (data?.length) {
-      if (buyType === 'PRODUCT') {
-        setSelectedProducts(data);
-      } else if (buyType === 'COLLECTION') {
-        setSelectedCollections(data);
-      }
+      buyType === 'PRODUCT' ? setSelectedProducts(data) : setSelectedCollections(data);
+      onChange(formatResource(data, buyType));
     }
   };
 
@@ -63,39 +46,69 @@ export default function CustomerBuys({
     { label: 'All products', value: 'ALL_PRODUCTS' },
     { label: 'Specific products', value: 'PRODUCT' },
     { label: 'Specific collections', value: 'COLLECTION' },
-    { label: 'Custom product filters', value: 'FILTER' }
+    { label: 'Custom product filters', value: 'FILTER' },
   ];
 
   const [filterType, setFilterType] = useState('all_conditions');
 
   const handleFilterTypeChange = useCallback(
-    (_, newValue) => setFilterType(newValue),
-    [],
+    (_, newValue) => {
+      setFilterType(newValue);
+      onChange(formatResource({filterType: newValue, conditions: conditionData}, 'FILTER'));
+    },
+    [conditionData, onChange]
   );
-
-  const [, setConditionData] = useState({
-    condition: '',
-    operator: '',
-    value: ''
-  });
+  const handleTypeChange = useCallback((newValue) => {
+    setBuyType(newValue);
+    let value = {};
+    switch (newValue) {
+      case 'PRODUCT':
+        value = selectedProducts;
+        break;
+        case 'COLLECTION':
+          value = selectedCollections;
+          break;
+        case 'FILTER':
+          value = {filterType, conditions: conditionData};
+          break;
+        default:
+          value = {};
+    }
+    onChange(formatResource(value, newValue));
+  }, [conditionData, filterType, onChange, selectedCollections, selectedProducts])
   const handleConditionDataChange = (newData) => {
     setConditionData(newData);
-    console.log(newData)
-  }
+    onChange( formatResource({filterType, conditions: newData}, 'FILTER'));
+  };
+  const handleRemoveProduct = (id) => {
+    const newProducts = selectedProducts.filter((p) => p.id !== id);
+    setSelectedProducts(newProducts);
+    onChange(formatResource(newProducts, 'PRODUCT'));
+  };
+
+  const handleRemoveCollection = (id) => {
+    const newCollections = selectedCollections.filter((c) => c.id !== id);
+    setSelectedCollections(newCollections);
+    onChange(formatResource(newCollections, 'COLLECTION'));
+  };
+
   return (
     <Card>
       <BlockStack gap="200">
-        <Text variant="headingMd" as="h2">Customer buys</Text>
+        <Text variant="headingMd" as="h2">
+          Customer buys
+        </Text>
         <Box paddingBlockEnd="100">
           <Text as="p">Any items from</Text>
-          <InlineGrid columns="2fr auto" gap={(buyType === 'PRODUCT' || buyType === 'COLLECTION') ? "200" : "0"}>
+          <InlineGrid
+            columns="2fr auto"
+            gap={buyType === 'PRODUCT' || buyType === 'COLLECTION' ? '200' : '0'}
+          >
             <Select
               label="Any items from"
               labelHidden
               options={buyTypeOptions}
-              onChange={(newValue) => {
-                setBuyType(newValue);
-              }}
+              onChange={handleTypeChange}
               value={buyType}
               name="buyType"
             />
@@ -108,10 +121,12 @@ export default function CustomerBuys({
         {buyType === 'FILTER' && (
           <>
             <BlockStack gap="100">
-              <Text variant="headingSm" as="h3">Conditions</Text>
+              <Text variant="headingSm" as="h3">
+                Conditions
+              </Text>
               <Box>
                 <InlineStack gap="300" blockAlign="center">
-                  <Text as="p">Products must math: </Text>
+                  <Text as="p">Products must match:</Text>
                   <RadioButton
                     label="all conditions"
                     checked={filterType === 'all_conditions'}
@@ -129,7 +144,7 @@ export default function CustomerBuys({
                 </InlineStack>
               </Box>
             </BlockStack>
-            <BlockStack gap="100">
+            <BlockStack gap="200">
               <ConditionSelector
                 currencyCode={currencyCode}
                 weightUnit={weightUnit}
@@ -145,7 +160,7 @@ export default function CustomerBuys({
         {buyType === 'PRODUCT' && (
           <SelectedTargets
             products={selectedProducts}
-            onRemove={(id) => setSelectedProducts(selectedProducts.filter((p) => p.id !== id))}
+            onRemove={handleRemoveProduct}
             onEdit={() => handleSelectResource('product')}
             currencyCode={currencyCode}
           />
@@ -154,13 +169,27 @@ export default function CustomerBuys({
         {buyType === 'COLLECTION' && (
           <SelectedTargets
             collections={selectedCollections}
-            onRemove={(id) => setSelectedCollections(selectedCollections.filter((c) => c.id !== id))}
+            onRemove={handleRemoveCollection}
             currencyCode={currencyCode}
           />
         )}
-
       </BlockStack>
     </Card>
   );
 }
 
+function formatResource(resource, type='PRODUCT') {
+  const result = {
+    type,
+    value: resource
+  }
+  if (type === 'PRODUCT') {
+    result.value = JSON.parse(JSON.stringify(resource)).map(p => ({
+      productId: removeGidStr(p.id),
+      variants: p.variants.map(v => removeGidStr(v.id))
+    }));
+  } else if (type === 'COLLECTION') {
+    result.value = JSON.parse(JSON.stringify(resource)).map(c => removeGidStr(c.id))
+  }
+  return result;
+}
