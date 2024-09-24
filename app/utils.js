@@ -25,8 +25,6 @@ export const ProductFilterOperators = [
   { label: 'does not contain', value: 'does_not_contain' },
   { label: 'is greater than',  value: 'greater_than'     },
   { label: 'is less than',     value: 'less_than'        },
-  { label: 'starts with',      value: 'starts_with'      },
-  { label: 'ends with',        value: 'ends_with'        }
 ]
 export async function resourcePicker({ type, selectionIds }) {
   return await window.shopify.resourcePicker({
