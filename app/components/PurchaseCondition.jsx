@@ -14,10 +14,12 @@ import CurrencySymbol from "./CurrencySymbol.jsx";
 import { DeleteIcon, PlusIcon } from "@shopify/polaris-icons";
 import SelectedTargets from "./SelectedTargets.jsx";
 import { useCallback, useState } from "react";
-import {removeGidStr, resourcePicker} from "../utils.js";
+import { removeGidStr, resourcePicker } from "../utils.js";
 
 export default function PurchaseCondition({ rule, currencyCode, conditionsData, onChange }) {
   const MAXRULE = 3;
+
+  // 创建新的空白条件
   const createBlankCondition = () => ({
     quantity: undefined,
     amount: undefined,
@@ -26,37 +28,29 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
     discountedPercentage: "",
     discountedEachOff: "",
   });
+
   // 初始化条件状态
-  const [conditions, setConditions] = useState(
-    conditionsData || [createBlankCondition()]
-  );
-  // 更新条件的通用逻辑
+  const [conditions, setConditions] = useState(conditionsData || [createBlankCondition()]);
+
+  /**
+   * 更新条件的通用逻辑，确保更新状态后调用 onChange 通知父组件
+   * @param {number} idx - 要更新的条件索引
+   * @param {any} newValue - 更新的值
+   * @param {string} field - 更新的字段
+   */
   const updateConditionValue = useCallback((idx, newValue, field) => {
-    const newConditions = conditions.map((condition, i) => (i === idx ? {...condition, [field]: newValue} : condition))
-    setConditions(newConditions);
-
-    onChange(formatConditions(newConditions));
-  }, [conditions, onChange]);
-
-  // 处理产品选择的逻辑
-  const handleSelectGets = (idx) => handleResourceSelect(conditions[idx].products, idx);
-
-  // 删除某个条件
-  const removeCondition = useCallback((idx) => {
-    const newConditions = conditions.filter((_, i) => i !== idx)
+    const newConditions = conditions.map((condition, i) =>
+      i === idx ? { ...condition, [field]: newValue } : condition
+    );
     setConditions(newConditions);
     onChange(formatConditions(newConditions));
   }, [conditions, onChange]);
 
-  // 添加新的条件
-  const addCondition = () => {
-    setConditions((prev) => [
-      ...prev,
-      createBlankCondition()
-    ]);
-  };
-
-  // 处理资源选择的逻辑
+  /**
+   * 处理资源选择的逻辑，更新相应条件中的产品列表
+   * @param {array} selectionIds - 已选择的产品 ID 列表
+   * @param {number} idx - 要更新的条件索引
+   */
   const handleResourceSelect = async (selectionIds, idx) => {
     const data = await resourcePicker({ type: "product", selectionIds });
     if (data?.length && idx !== null) {
@@ -64,7 +58,28 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
     }
   };
 
-  // 抽取通用的 RadioButton 逻辑
+  /**
+   * 删除某个条件
+   * @param {number} idx - 要删除的条件索引
+   */
+  const removeCondition = useCallback((idx) => {
+    const newConditions = conditions.filter((_, i) => i !== idx);
+    setConditions(newConditions);
+    onChange(formatConditions(newConditions));
+  }, [conditions, onChange]);
+
+  /**
+   * 添加新的空白条件
+   */
+  const addCondition = () => {
+    setConditions((prev) => [...prev, createBlankCondition()]);
+  };
+
+  /**
+   * 渲染折扣选项（RadioButton）和相应的输入框
+   * @param {object} condition - 当前条件对象
+   * @param {number} idx - 条件索引
+   */
   const renderDiscountOptions = (condition, idx) => (
     <>
       <InlineStack gap="400">
@@ -89,8 +104,8 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
           checked={condition.discounted === "FIXED_AMOUNT"}
           onChange={() => updateConditionValue(idx, "FIXED_AMOUNT", "discounted")}
         />
-
       </InlineStack>
+
       {condition.discounted === "PERCENTAGE" && (
         <Box width="200px" paddingBlockEnd="200">
           <TextField
@@ -103,6 +118,7 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
           />
         </Box>
       )}
+
       {condition.discounted === "FIXED_AMOUNT" && (
         <Box width="200px" paddingBlockEnd="200">
           <TextField
@@ -126,7 +142,7 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
           <BlockStack gap="400">
             {conditions.map((condition, idx) => (
               <Box key={idx}>
-                <Text variant="headingSm" as="h3" >{rule === "AMOUNT" ? "Amount" : "Quantity"} condition</Text>
+                <Text variant="headingSm" as="h3">{rule === "AMOUNT" ? "Amount" : "Quantity"} condition</Text>
                 <Box paddingBlockEnd="300" paddingBlockStart="200">
                   <InlineGrid columns={conditions.length > 1 ? "2fr auto auto" : "2fr auto"} gap="200">
                     {(rule === "QUANTITY" || rule === "UNIQUE") && (
@@ -151,10 +167,13 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
                         prefix={<CurrencySymbol currencyCode={currencyCode} />}
                       />
                     )}
-                    <Button onClick={() => handleSelectGets(idx)}>Customer gets</Button>
+
+                    {/* 选择产品的按钮 */}
+                    <Button onClick={() => handleResourceSelect(condition.products, idx)}>Customer gets</Button>
                     {conditions.length > 1 && (<Button icon={DeleteIcon} onClick={() => removeCondition(idx)} />)}
                   </InlineGrid>
                 </Box>
+
                 {/* 显示选择的产品 */}
                 <SelectedTargets
                   products={condition.products}
@@ -165,7 +184,7 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
                       "products"
                     )
                   }
-                  onEdit={() => handleSelectGets(idx)}
+                  onEdit={() => handleResourceSelect(condition.products, idx)}
                   currencyCode={currencyCode}
                 />
 
@@ -182,10 +201,10 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
           </BlockStack>
         </Box>
 
-
+        {/* 当条件数目小于 MAXRULE 时显示添加按钮 */}
         {conditions.length <= MAXRULE && (
           <Box paddingBlockStart="100">
-            <Button onClick={addCondition} accessibilityLabel="Add another condition"  icon={PlusIcon}>
+            <Button onClick={addCondition} accessibilityLabel="Add another condition" icon={PlusIcon}>
               Add another condition
             </Button>
           </Box>
@@ -195,6 +214,11 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
   );
 }
 
+/**
+ * 格式化条件列表，将产品数据转换为符合期望的格式
+ * @param {array} data - 原始条件数据
+ * @returns {array} - 格式化后的条件数据
+ */
 function formatConditions(data) {
   return JSON.parse(JSON.stringify(data)).map(c => {
     c.products = c.products.map(p => ({
@@ -206,5 +230,5 @@ function formatConditions(data) {
     c.discountedPercentage = Number(c.discountedPercentage);
     c.discountedEachOff = Number(c.discountedEachOff);
     return c;
-  })
+  });
 }
