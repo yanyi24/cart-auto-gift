@@ -1,28 +1,13 @@
-import {
-  BlockStack,
-  Box,
-  Button,
-  Card,
-  Divider, Icon,
-  InlineGrid, InlineStack,
-  Layout,
-  Page,
-  RadioButton,
-  Text,
-  TextField, Tooltip
-} from "@shopify/polaris";
+import { BlockStack, Box, Card, Layout, Page, Text, TextField } from "@shopify/polaris";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import {useCallback, useEffect, useMemo, useState} from "react";
-import {AlertCircleIcon, DeleteIcon, PlusIcon} from "@shopify/polaris-icons";
+import {useCallback, useMemo, useState} from "react";
 import shopify from "../shopify.server.js";
-import CurrencySymbol from "../components/CurrencySymbol.jsx";
-import SelectedTargets from "../components/SelectedTargets.jsx";
 import {ActiveDatesCard } from "@shopify/discount-app-components";
 import {useField} from "@shopify/react-form";
-import {removeGidStr} from "../utils.js";
 import CustomerBuys from "../components/CustomerBuys.jsx";
 import PurchaseRule from "../components/PurchaseRule.jsx";
+import PurchaseCondition from "../components/PurchaseCondition.jsx";
 
 let functionId = null, isNew = false;
 export const loader = async ({ params, request }) => {
@@ -129,7 +114,6 @@ export const loader = async ({ params, request }) => {
   });
 };
 
-
 export const action = async ({ request }) => {
   const { admin } = await shopify.authenticate.admin(request);
   const formData = await request.formData();
@@ -216,83 +200,26 @@ export default function Discount() {
 
   const [title, setTitle] = useState('');
   const [rule, setRule] = useState('QUANTITY');
-  const [conditions, setConditions] = useState([{
-    quantity: undefined,
-    amount: undefined,
-    products: [],
-    discounted: 'FREE',
-    discountedPercentage: '',
-    discountedEachOff: ''
-  }]);
+  const [conditions, setConditions] = useState([]);
   const [buys, setBuys] = useState({ type: 'ALL_PRODUCTS', value: {} });
   const todayDate = useMemo(() => new Date(), []);
 
   const startDate = useField(todayDate);
   const endDate = useField(null);
 
-
-
-
-
   // Handle state change callbacks
   const handleTitleChange = useCallback((newValue) => setTitle(newValue), []);
-  const updateConditionValue = useCallback((idx, newValue, type) => {
-    setConditions((prev) => prev.map((c, i) => i === idx ? { ...c, [type]: newValue } : c));
-  }, []);
 
-  const handleRuleChange = useCallback((newValue) => {
-    setRule(newValue);
-    console.log(newValue)
-  }, []);
-  // Handle resource selection
-  async function handleResourceSelect(type, selectionIds, idx = null) {
-    const data = await resourcePicker({ type, selectionIds });
-    if (data?.length) {
-      if (idx !== null) {
-        setConditions((prev) =>
-          prev.map((condition, i) => i === idx ? { ...condition, products: data } : condition)
-        );
-      } else {
-      }
-    }
-  }
-
-  const handleSelectGets = (idx) => handleResourceSelect('product', conditions[idx].products, idx);
-
-  // Handle adding/removing conditions
-  function addCondition() {
-    if (conditions.some(c => c.products.length === 0)) return;
-    setConditions([...conditions, { quantity: undefined, amount: undefined, products: [], discounted: 'FREE', discountedPercentage: '', discountedEachOff: '' }]);
-  }
-
-  function removeCondition(idx) {
-    setConditions(conditions.filter((_, i) => i !== idx));
-  }
   async function handleSave(e) {
     e.preventDefault();
     const form = document.getElementById('discountForm');
-
-
     form.querySelector('input[name="buys"]').value = JSON.stringify(buys);
-
-    const conditionsData = JSON.parse(JSON.stringify(conditions)).map(c => {
-      c.products = c.products.map(p => ({
-        productId: removeGidStr(p.id),
-        variants: p.variants.map(v => removeGidStr(v.id))
-      }));
-      c.quantity && (c.quantity = Number(c.quantity));
-      c.amount && (c.amount = Number(c.amount));
-      c.discountedPercentage = Number(c.discountedPercentage);
-      c.discountedEachOff = Number(c.discountedEachOff);
-      return c;
-    });
-    form.querySelector('input[name="conditions"]').value = JSON.stringify(conditionsData);
+    form.querySelector('input[name="conditions"]').value = JSON.stringify(conditions);
     form.querySelector('input[name="startDate"]').value = new Date(startDate.value).toISOString();
     form.querySelector('input[name="endDate"]').value = endDate.value ? new Date(endDate.value).toISOString() : '';
     form.querySelector('input[name="rule"]').value = rule;
     // form.submit();
   }
-
   return (
     <Page
       backAction={{ url: '/app/discounts' }}
@@ -341,113 +268,12 @@ export default function Discount() {
 
               {/* Purchase Conditions Section */}
               <PurchaseRule rule={rule} onChange={setRule} />
-              <Card>
-                <BlockStack gap="200">
-                  <Text variant="headingMd" as="h2">Purchase conditions</Text>
-                  <Box>
-                    <BlockStack>
-                      <Text as="p">{rule === 'AMOUNT' ? 'Amount' : 'Quantity'}</Text>
-                    </BlockStack>
-                    <BlockStack gap="400">
-                      {conditions.map((condition, idx) => (
 
-                        <Box key={idx}>
-                          <Box paddingBlockEnd="300">
-                            <InlineGrid columns="2fr auto auto" gap="200">
-                              {(rule === 'QUANTITY' || rule === 'UNIQUE') && (
-                                <TextField
-                                  autoComplete="off"
-                                  type="number"
-                                  onChange={(value) => updateConditionValue(idx, value, 'quantity')}
-                                  value={condition.quantity}
-                                  label="Quantity"
-                                  labelHidden
-                                />
-                              )}
-
-                              {rule === 'AMOUNT' && (
-                                <TextField
-                                  autoComplete="off"
-                                  type="number"
-                                  onChange={(value) => updateConditionValue(idx, value, 'amount')}
-                                  value={condition.amount}
-                                  label="Amount"
-                                  labelHidden
-                                  prefix={<CurrencySymbol currencyCode={currencyCode}/>}
-                                />
-                              )}
-                              <Button onClick={() => handleSelectGets(idx)}>Customer gets</Button>
-                              <Button disabled={idx === 0} icon={DeleteIcon} onClick={() => removeCondition(idx)}/>
-                            </InlineGrid>
-                          </Box>
-                          <SelectedTargets
-                            products={condition.products}
-                            onRemove={(id) => updateConditionValue(idx, condition.products.filter((p) => p.id !== id), 'products')}
-                            onEdit={() => handleSelectGets(idx)}
-                            currencyCode={currencyCode}
-                          />
-                          <Box paddingBlockStart="300">
-                            <BlockStack gap="200">
-                              <Text variant="headingSm" as="h2">Discount value</Text>
-                              <BlockStack>
-                                <RadioButton
-                                  label="Free"
-                                  id={`FREE-${idx}`}
-                                  value='FREE'
-                                  checked={condition.discounted === 'FREE'}
-                                  onChange={() => updateConditionValue(idx, 'FREE', 'discounted')}
-                                />
-                                <RadioButton
-                                  label="Percentage"
-                                  checked={condition.discounted === 'PERCENTAGE'}
-                                  id={`PERCENTAGE-${idx}`}
-                                  value="PERCENTAGE"
-                                  onChange={() => updateConditionValue(idx, 'PERCENTAGE', 'discounted')}
-                                />
-                                {condition.discounted === 'PERCENTAGE' && (
-                                  <Box paddingInlineStart="600" width="200px">
-                                    <TextField
-                                      label="Percentage"
-                                      labelHidden
-                                      value={condition.discountedPercentage}
-                                      onChange={(value) => updateConditionValue(idx, value, 'discountedPercentage')}
-                                      suffix="%"
-                                      autoComplete="off"
-                                    />
-                                  </Box>
-                                )}
-                                <RadioButton
-                                  label="Fixed amount"
-                                  id={`FIXED_AMOUNT-${idx}`}
-                                  value="FIXED_AMOUNT"
-                                  checked={condition.discounted === 'FIXED_AMOUNT'}
-                                  onChange={() => updateConditionValue(idx, 'FIXED_AMOUNT', 'discounted')}
-                                />
-                                {condition.discounted === 'FIXED_AMOUNT' && (
-                                  <Box paddingInlineStart="600" width="200px">
-                                    <TextField
-                                      label="Each off"
-                                      labelHidden
-                                      value={condition.discountedEachOff}
-                                      onChange={(value) => updateConditionValue(idx, value, 'discountedEachOff')}
-                                      prefix={<CurrencySymbol currencyCode={currencyCode}/>}
-                                      autoComplete="off"
-                                    />
-                                  </Box>
-                                )}
-                              </BlockStack>
-                            </BlockStack>
-                          </Box>
-                        </Box>
-                      ))}
-                    </BlockStack>
-                  </Box>
-                  <Divider/>
-                  <Box>
-                    <Button onClick={addCondition} accessibilityLabel="Add another condition" variant="plain" icon={PlusIcon}>Add another condition</Button>
-                  </Box>
-                </BlockStack>
-              </Card>
+              <PurchaseCondition
+                rule={rule}
+                currencyCode={currencyCode}
+                onChange={(conditions) => setConditions(conditions)}
+              />
 
             </BlockStack>
             <Box paddingBlockStart="400">
@@ -463,21 +289,6 @@ export default function Discount() {
           <Card />
         </Layout.Section>
       </Layout>
-
     </Page>
   );
 }
-
-async function resourcePicker({ type, selectionIds }) {
-  return await window.shopify.resourcePicker({
-    type,
-    action: 'add',
-    multiple: true,
-    selectionIds,
-    filter: {
-      draft: false
-    }
-  });
-}
-
-
