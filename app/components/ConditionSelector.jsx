@@ -242,14 +242,14 @@ function ConditionItem({
         active={valuePopoverActive}
         activator={
           <TextField
+            label="Condition value"
             labelHidden
             value={value}
             onChange={handleValueChange}
             autoComplete="off"
             prefix={condition[0] === 'price' && <CurrencySymbol currencyCode={currencyCode} />}
             suffix={condition[0] === 'weight' && <WeightSymbol weightUnit={weightUnit} />}
-            onFocus={handleValueFocus}
-          />
+            onFocus={handleValueFocus}/>
         }
         preferredPosition="above"
         preferredAlignment="left"
