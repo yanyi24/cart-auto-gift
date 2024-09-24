@@ -192,6 +192,20 @@ function ConditionItem({
   );
 
   /**
+   * 处理 valueList 改变时的操作
+   * @param {array} v - 新的被选中的预设值
+   */
+  const handleValueListChange = useCallback(
+    (v) => {
+      onConditionChange({
+        value: v[0],
+      });
+      setValuePopoverActive(false);
+    },
+    [onConditionChange]
+  );
+
+  /**
    * 处理值改变时的操作
    * @param {string} newValue - 新的值
    */
@@ -243,6 +257,7 @@ function ConditionItem({
         activator={
           <TextField
             label="Condition value"
+            size="slim"
             labelHidden
             value={value}
             onChange={handleValueChange}
@@ -255,7 +270,7 @@ function ConditionItem({
         preferredAlignment="left"
         onClose={togglePopover(setValuePopoverActive)}
       >
-        <OptionList allowMultiple={false} onChange={(v) => onConditionChange({ value: v[0] })} options={valueList} selected={[value]} />
+        <OptionList allowMultiple={false} onChange={handleValueListChange} options={valueList} selected={[value]} />
       </Popover>
 
       {/* 删除按钮 */}
