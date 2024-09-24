@@ -216,8 +216,6 @@ export default function Discount() {
   const discountData = discountInfo?.discount || {};
 
   const [title, setTitle] = useState('');
-  const [buyType, setBuyType] = useState('ALL_PRODUCTS');
-  const [selectedTags, setSelectedTags] = useState([]);
   const [rule, setRule] = useState('QUANTITY');
   const [conditions, setConditions] = useState([{
     quantity: undefined,
@@ -227,55 +225,14 @@ export default function Discount() {
     discountedPercentage: '',
     discountedEachOff: ''
   }]);
-  const [selectedBuysProducts, setSelectedBuysProducts] = useState([]);
-  const [selectedBuysCollections, setSelectedBuysCollections] = useState([]);
+  const [buys, setBuys] = useState({ type: 'ALL_PRODUCTS', value: {} });
   const todayDate = useMemo(() => new Date(), []);
 
   const startDate = useField(todayDate);
   const endDate = useField(null);
 
 
-  useEffect(() => {
-    if (discountInfo) {
-      setTitle(discountData.title || '');
-      setBuyType(discountMetafield?.buys?.type || 'ALL_PRODUCTS');
 
-      // 填充选中的产品或集合
-      if (discountMetafield?.buys?.type === 'PRODUCTS') {
-        setSelectedBuysProducts(discountMetafield.buys.value || []);
-      } else if (discountMetafield?.buys?.type === 'COLLECTIONS') {
-        setSelectedBuysCollections(discountMetafield.buys.value || []);
-      } else if (discountMetafield?.buys?.type === 'TAGS') {
-        setSelectedTags(discountMetafield.buys.value || []);
-      }
-
-      if (discountMetafield?.rule === 'QUANTITY') {
-        discountMetafield.conditions.forEach(condition => condition.amount = undefined);
-      } else if (discountMetafield?.rule === 'AMOUNT'){
-        discountMetafield.conditions.forEach(condition => condition.quantity = undefined);
-      }
-      // 填充条件
-      setConditions(discountMetafield.conditions || [{
-        quantity: undefined,
-        amount: undefined,
-        products: [],
-        discounted: 'FREE',
-        discountedPercentage: '',
-        discountedEachOff: ''
-      }]);
-
-      // 设置开始和结束日期
-      if (discountData.startsAt) {
-        startDate.onChange(new Date(discountData.startsAt));
-      }
-      if (discountData.endsAt) {
-        endDate.onChange(new Date(discountData.endsAt));
-      }
-
-      // 设置规则
-      setRule(discountMetafield.rule || 'QUANTITY');
-    }
-  }, [discountInfo]);
 
 
   // Handle state change callbacks
@@ -294,7 +251,6 @@ export default function Discount() {
           prev.map((condition, i) => i === idx ? { ...condition, products: data } : condition)
         );
       } else {
-        type === 'collection' ? setSelectedBuysCollections(data) : setSelectedBuysProducts(data);
       }
     }
   }
@@ -312,21 +268,7 @@ export default function Discount() {
   }
   async function handleSave() {
     const form = document.getElementById('discountForm');
-    const buys = {
-      type: buyType
-    };
-    if (buyType === 'ALL_PRODUCTS') {
-      buys.value = [];
-    } else if (buyType === 'PRODUCTS') {
-      buys.value = JSON.parse(JSON.stringify(selectedBuysProducts)).map(p => ({
-        productId: removeGidStr(p.id),
-        variants: p.variants.map(v => removeGidStr(v.id))
-      }));
-    } else if (buyType === 'COLLECTIONS') {
-      buys.value = selectedBuysCollections.map(c => c.id);
-    } else if (buyType === 'TAGS') {
-      buys.value = selectedTags;
-    }
+
 
     form.querySelector('input[name="buys"]').value = JSON.stringify(buys);
 
@@ -346,10 +288,7 @@ export default function Discount() {
     form.querySelector('input[name="endDate"]').value = endDate.value ? new Date(endDate.value).toISOString() : '';
     form.submit();
   }
-  const [buys, setBuys] = useState({ type: 'ALL_PRODUCTS', value: {} });
-  const handleBuysChange = (newBuys) => {
-    setBuys(newBuys);
-  };
+
   return (
     <Page
       backAction={{ url: '/app/discounts' }}
@@ -392,9 +331,8 @@ export default function Discount() {
                 shopTags={shopTags}
                 shopVendors={shopVendors}
                 shopTypes={shopTypes}
-                onChange={handleBuysChange}
-                initialBuyType={buys.type}
-                initialBuysValue={buys.value}
+                onChange={(newBuys) => setBuys(newBuys)}
+                buys={buys}
               />
 
               {/* Purchase Conditions Section */}
@@ -444,7 +382,7 @@ export default function Discount() {
               </Card>
               <Card>
                 <BlockStack gap="200">
-                  <Text variant="headingMd" as="h2">Conditions</Text>
+                  <Text variant="headingMd" as="h2">Purchase conditions</Text>
                   <Box>
                     <BlockStack>
                       <Text as="p">{rule === 'AMOUNT' ? 'Amount' : 'Quantity'}</Text>
