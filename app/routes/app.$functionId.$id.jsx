@@ -22,6 +22,7 @@ import {ActiveDatesCard } from "@shopify/discount-app-components";
 import {useField} from "@shopify/react-form";
 import {removeGidStr} from "../utils.js";
 import CustomerBuys from "../components/CustomerBuys.jsx";
+import PurchaseRule from "../components/PurchaseRule.jsx";
 
 let functionId = null, isNew = false;
 export const loader = async ({ params, request }) => {
@@ -212,8 +213,6 @@ export const action = async ({ request }) => {
 
 export default function Discount() {
   const { currencyCode, weightUnit, shopVendors, shopTags, shopTypes, discountInfo } = useLoaderData();
-  const discountMetafield = JSON.parse(discountInfo?.metafield?.value || "{}") ;
-  const discountData = discountInfo?.discount || {};
 
   const [title, setTitle] = useState('');
   const [rule, setRule] = useState('QUANTITY');
@@ -237,11 +236,14 @@ export default function Discount() {
 
   // Handle state change callbacks
   const handleTitleChange = useCallback((newValue) => setTitle(newValue), []);
-  const handleRuleChange = useCallback((_, newValue) => setRule(newValue), []);
   const updateConditionValue = useCallback((idx, newValue, type) => {
     setConditions((prev) => prev.map((c, i) => i === idx ? { ...c, [type]: newValue } : c));
   }, []);
 
+  const handleRuleChange = useCallback((newValue) => {
+    setRule(newValue);
+    console.log(newValue)
+  }, []);
   // Handle resource selection
   async function handleResourceSelect(type, selectionIds, idx = null) {
     const data = await resourcePicker({ type, selectionIds });
@@ -266,7 +268,8 @@ export default function Discount() {
   function removeCondition(idx) {
     setConditions(conditions.filter((_, i) => i !== idx));
   }
-  async function handleSave() {
+  async function handleSave(e) {
+    e.preventDefault();
     const form = document.getElementById('discountForm');
 
 
@@ -286,7 +289,8 @@ export default function Discount() {
     form.querySelector('input[name="conditions"]').value = JSON.stringify(conditionsData);
     form.querySelector('input[name="startDate"]').value = new Date(startDate.value).toISOString();
     form.querySelector('input[name="endDate"]').value = endDate.value ? new Date(endDate.value).toISOString() : '';
-    form.submit();
+    form.querySelector('input[name="rule"]').value = rule;
+    // form.submit();
   }
 
   return (
@@ -336,50 +340,7 @@ export default function Discount() {
               />
 
               {/* Purchase Conditions Section */}
-              <Card>
-                <BlockStack gap="200">
-                  <Text variant="headingMd" as="h2">Purchase rule</Text>
-                  <Box>
-                    <BlockStack>
-                      <InlineStack gap="100" blockAlign="center">
-                        <RadioButton
-                          label="Minimum total quantity"
-                          checked={rule === 'QUANTITY'}
-                          id="QUANTITY"
-                          name="rule"
-                          value="QUANTITY"
-                          onChange={handleRuleChange}
-                        />
-                        <Tooltip content="Requires the total number of items in the cart to meet or exceed a specified quantity, regardless of item types.">
-                          <Icon source={AlertCircleIcon} tone="base" />
-                        </Tooltip>
-                      </InlineStack>
-                      <InlineStack gap="100" blockAlign="center">
-                        <RadioButton
-                          label="Minimum unique items"
-                          checked={rule === 'UNIQUE'}
-                          id="UNIQUE"
-                          name="rule"
-                          value="UNIQUE"
-                          onChange={handleRuleChange}
-                        />
-                        <Tooltip content="Requires the number of unique item types in the cart to meet or exceed a specified number, regardless of quantity for each type.">
-                          <Icon source={AlertCircleIcon} tone="base" />
-                        </Tooltip>
-                      </InlineStack>
-                      <RadioButton
-                        label="Minimum purchase amount"
-                        id="AMOUNT"
-                        value="AMOUNT"
-                        name="rule"
-                        checked={rule === 'AMOUNT'}
-                        onChange={handleRuleChange}
-                      />
-                    </BlockStack>
-                  </Box>
-
-                </BlockStack>
-              </Card>
+              <PurchaseRule rule={rule} onChange={setRule} />
               <Card>
                 <BlockStack gap="200">
                   <Text variant="headingMd" as="h2">Purchase conditions</Text>
