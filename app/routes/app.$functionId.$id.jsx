@@ -132,7 +132,7 @@ export const action = async ({ request }) => {
       value: JSON.stringify(
         {
           inCollectionIds: buys.type === 'COLLECTIONS' ? buys.value : [],
-          inTags: buys.type === 'TAGS' ? buys.value : [],
+          tags: buys.type === 'FILTER' ? buys.value.conditions.filter(c => c.condition === 'tag').map(c => c.value) : [],
           buys,
           rule,
           conditions
@@ -218,7 +218,7 @@ export default function Discount() {
     form.querySelector('input[name="startDate"]').value = new Date(startDate.value).toISOString();
     form.querySelector('input[name="endDate"]').value = endDate.value ? new Date(endDate.value).toISOString() : '';
     form.querySelector('input[name="rule"]').value = rule;
-    // form.submit();
+    form.submit();
   }
   return (
     <Page

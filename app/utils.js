@@ -22,7 +22,7 @@ export const ProductFilterOperators = [
   { label: 'starts with',      value: 'starts_with'      },
   { label: 'ends with',        value: 'ends_with'        },
   { label: 'contains',         value: 'contains'         },
-  { label: 'does not contain', value: 'does_not_contain' },
+  { label: 'does not contain', value: 'not_contain' },
   { label: 'is greater than',  value: 'greater_than'     },
   { label: 'is less than',     value: 'less_than'        },
 ]

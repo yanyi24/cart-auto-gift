@@ -120,17 +120,100 @@ export function run(input) {
   }
   if (buys.type === 'COLLECTION') {
     // 筛选购物车中不包含礼品且在给定集合中的商品
-    lines = cartLines.filter(line => (line.merchandise.product.inCollection && !allGifts.includes(removeGidStr(line.merchandise.id))));
+    lines = cartLines.filter(line => (line.merchandise.product.inAnyCollection && !allGifts.includes(removeGidStr(line.merchandise.id))));
   }
 
   if (buys.type === 'FILTER') {
     const allGifts = getAllGiftVariants(conditions);
-    // 筛选购物车中不包含礼品且包含给定tag的商品
-    lines = cartLines.filter(line => (line.merchandise.product.inTags && !allGifts.includes(removeGidStr(line.merchandise.id))));
+    // 筛选购物车中不包含礼品且符合条件的商品
+    lines = filterCartItems(cartLines, allGifts, buys.value)
   }
    return handleRule(lines);
 }
 
+function filterCartItems(cartLines, allGifts, filter) {
+  const { conditions, filterType } = filter;
+  return cartLines.filter((line) => {
+    const variant = line.merchandise;
+    const {id, product, weightUnit, weight, title} = variant;
+    if (allGifts.includes(removeGidStr(id))) {
+      return false;
+    }
+    const {quantity, cost: {totalAmount: {amount}}} = line;
+    const price = Number(amount) / quantity; // 商品单价
+    const weightData =
+      weightUnit === "GRAM"
+        ? weight / 1000
+        : weightUnit === "OUNCES"
+          ? weight / 35.27396
+          : weightUnit === "POUNDS"
+            ? weight / 2.20462
+            : weight;
+
+    // 遍历每个 condition 并应用操作符
+    const results = conditions.map(({condition, operator, value}) => {
+      // 获取商品属性
+      let productValue;
+      switch (condition) {
+        case "title":
+          productValue = product.title || "";
+          break;
+        case "type":
+          productValue = product.productType || "";
+          break;
+        case "vendor":
+          productValue = product.vendor || "";
+          break;
+        case "tag":
+          return filterType === "all_conditions"
+            ? product.hasTags.every(item => item.hasTag)
+            : product.hasAnyTag;
+        case "price":
+          productValue = price;
+          break;
+        case "weight":
+          productValue = weightData;
+          break;
+        case "v_title":
+          productValue = title;
+          break;
+        default:
+          productValue = "";
+      }
+
+      // 执行操作符逻辑
+      switch (operator) {
+        case "equal":
+          return productValue === value;
+        case "not_equal":
+          return productValue !== value;
+        case "starts_with":
+          return productValue.startsWith(value);
+        case "ends_with":
+          return productValue.endsWith(value);
+        case "contains":
+          return productValue.includes(value);
+        case "not_contain":
+          return !productValue.includes(value);
+        case "greater_than":
+          return Number(productValue) > Number(value);
+        case "less_than":
+          return Number(productValue) < Number(value);
+        default:
+          return false;
+      }
+    });
+
+    // 根据 filterType 决定返回值
+    if (filterType === "all_conditions") {
+      return results.every((result) => result === true);
+    } else if (filterType === "any_conditions") {
+      return results.some((result) => result === true);
+    }
+
+    return false;
+  });
+}
 
 
 function findObjectByValue(arr, inputValue, type='quantity') {

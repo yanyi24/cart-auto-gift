@@ -1,4 +1,4 @@
-query RunInput($inCollectionIds: [ID!]!, $inTags: [String!]!) {
+query RunInput($inCollectionIds: [ID!]!, $tags: [String!]!) {
   cart {
     buyerIdentity {
       customer {
@@ -23,8 +23,11 @@ query RunInput($inCollectionIds: [ID!]!, $inTags: [String!]!) {
             title
             productType
             vendor
-            inCollection: inAnyCollection(ids: $inCollectionIds)
-            inTags: hasAnyTag(tags: $inTags)
+            inAnyCollection(ids: $inCollectionIds)
+            hasAnyTag(tags: $tags)
+            hasTags(tags: $tags){
+              hasTag
+            }
           }
         }
       }
