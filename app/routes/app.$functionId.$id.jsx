@@ -241,7 +241,7 @@ export default function Discount() {
 
             <BlockStack gap="400">
               <Card>
-                <BlockStack>
+                <BlockStack gap="300">
                   <Text variant="headingMd" as="h2">Title</Text>
                   <TextField
                     autoComplete="off"

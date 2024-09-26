@@ -1,0 +1,17 @@
+<div>
+  <button id="test">productsInCollections</button>
+  <button id="test2">productsHasTags</button>
+  <img src="{{ "thumbs-up.png" | asset_img_url: '15x' }}" height="15" width="15" loading="lazy">
+</div>
+{% schema %}
+{
+  "name": "Cart Auto Gift",
+  "target": "body",
+  "javascript": "app.js",
+  "settings": [
+    { "type": "product", "id": "product", "label": "product", "autofill": true },
+    { "type": "color", "id": "colour", "label": "Star Colour", "default": "#ff0000" }
+  ]
+}
+{% endschema %}
+
