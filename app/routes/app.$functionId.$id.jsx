@@ -1,5 +1,5 @@
 import { BlockStack, Box, Card, Layout, Page, Text, TextField } from "@shopify/polaris";
-import { json } from "@remix-run/node";
+import {json, redirect} from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import {useCallback, useMemo, useState} from "react";
 import shopify from "../shopify.server.js";
@@ -8,6 +8,8 @@ import {useField} from "@shopify/react-form";
 import CustomerBuys from "../components/CustomerBuys.jsx";
 import PurchaseRule from "../components/PurchaseRule.jsx";
 import PurchaseCondition from "../components/PurchaseCondition.jsx";
+import {createDiscount} from "../model/discount.js";
+import {BUYS_TYPES, RULES} from "../utils.js";
 
 let functionId = null, isNew = false;
 export const loader = async ({ params, request }) => {
@@ -115,7 +117,7 @@ export const loader = async ({ params, request }) => {
 };
 
 export const action = async ({ request }) => {
-  const { admin } = await shopify.authenticate.admin(request);
+  const { admin, session } = await shopify.authenticate.admin(request);
   const formData = await request.formData();
 
   const rule = formData.get('rule');
@@ -124,20 +126,21 @@ export const action = async ({ request }) => {
   const endsAt = formData.get('endDate') || null;
   const conditions = JSON.parse(formData.get('conditions'));
   const title = formData.get('title');
+  const metafield = JSON.stringify(
+    {
+      inCollectionIds: buys.type === 'COLLECTIONS' ? buys.value : [],
+      tags: buys.type === BUYS_TYPES.filter ? buys.value.conditions.filter(c => c.condition === 'tag').map(c => c.value) : [],
+      buys,
+      rule,
+      conditions
+    }
+  );
   const metafields = [
     {
       namespace: "$app:auto-gift",
       key: "amount-configuration",
       type: "json",
-      value: JSON.stringify(
-        {
-          inCollectionIds: buys.type === 'COLLECTIONS' ? buys.value : [],
-          tags: buys.type === 'FILTER' ? buys.value.conditions.filter(c => c.condition === 'tag').map(c => c.value) : [],
-          buys,
-          rule,
-          conditions
-        }
-      ),
+      value: metafield,
     },
   ];
   const baseDiscount = {
@@ -188,10 +191,20 @@ export const action = async ({ request }) => {
       })),
     }, { status: 400 });
   } else {
-    return json({
+    const res = await createDiscount({
       discountId: discount.discountId,
-      success: true,
+      title: title,
+      metafield,
+      shop: session.shop,
+      startsAt,
+      endsAt,
     });
+    if (res.success) {
+      return redirect("/app/discounts");
+    } else {
+      return json({ success: false, message: res.message });
+    }
+
   }
 };
 
@@ -199,9 +212,9 @@ export default function Discount() {
   const { currencyCode, weightUnit, shopVendors, shopTags, shopTypes, discountInfo } = useLoaderData();
 
   const [title, setTitle] = useState('');
-  const [rule, setRule] = useState('QUANTITY');
+  const [rule, setRule] = useState(RULES.quantity);
   const [conditions, setConditions] = useState([]);
-  const [buys, setBuys] = useState({ type: 'ALL_PRODUCTS', value: {} });
+  const [buys, setBuys] = useState({ type: BUYS_TYPES.products, value: {} });
   const todayDate = useMemo(() => new Date(), []);
 
   const startDate = useField(todayDate);

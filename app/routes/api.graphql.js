@@ -1,11 +1,7 @@
 import {authenticate} from "../shopify.server.js";
 import {json} from "@remix-run/node";
+import {CONDITIONS} from "../utils.js";
 
-const CONDITIONS = {
-  value: ['all', 'any'],
-  any: 'any',
-  all: 'all'
-}
 
 // export const loader = async ({ request }) => {
 //   const {admin} = await authenticate.public.appProxy(request);

@@ -1,6 +1,7 @@
 import {BlockStack, Box, Card, Icon, InlineStack, RadioButton, Text, Tooltip} from "@shopify/polaris";
 import {AlertCircleIcon} from "@shopify/polaris-icons";
 import {useCallback} from "react";
+import {RULES} from "../utils.js";
 
 export default function PurchaseRule({rule, onChange}){
   const handleRuleChange = useCallback((_, newValue) => {
@@ -16,10 +17,10 @@ export default function PurchaseRule({rule, onChange}){
             <InlineStack gap="100" blockAlign="center">
               <RadioButton
                 label="Minimum total quantity"
-                checked={rule === 'QUANTITY'}
-                id="QUANTITY"
+                checked={rule === RULES.quantity}
+                id={RULES.quantity}
                 name="rule"
-                value="QUANTITY"
+                value={RULES.quantity}
                 onChange={handleRuleChange}
               />
               <Tooltip content="Requires the total number of items in the cart to meet or exceed a specified quantity, regardless of item types.">
@@ -29,10 +30,10 @@ export default function PurchaseRule({rule, onChange}){
             <InlineStack gap="100" blockAlign="center">
               <RadioButton
                 label="Minimum unique items"
-                checked={rule === 'UNIQUE'}
-                id="UNIQUE"
+                checked={rule === RULES.unique}
+                id={RULES.unique}
                 name="rule"
-                value="UNIQUE"
+                value={RULES.unique}
                 onChange={handleRuleChange}
               />
               <Tooltip content="Requires the number of unique item types in the cart to meet or exceed a specified number, regardless of quantity for each type.">
@@ -41,10 +42,10 @@ export default function PurchaseRule({rule, onChange}){
             </InlineStack>
             <RadioButton
               label="Minimum purchase amount"
-              id="AMOUNT"
-              value="AMOUNT"
+              id={RULES.amount}
+              value={RULES.amount}
               name="rule"
-              checked={rule === 'AMOUNT'}
+              checked={rule === RULES.amount}
               onChange={handleRuleChange}
             />
           </BlockStack>

@@ -6,6 +6,36 @@ export function addGidStr(type, id) {
   return `gid://shopify/${type}/${id}`;
 }
 
+export const CONDITIONS = {
+  value: ['ALL', 'ANY'],
+  any: 'ANY',
+  all: 'ALL'
+}
+
+export const BUYS_TYPES = {
+  options: [
+    { label: 'All products', value: 'ALL_PRODUCTS' },
+    { label: 'Specific products', value: 'PRODUCT' },
+    { label: 'Specific collections', value: 'COLLECTION' },
+    { label: 'Custom product filters', value: 'FILTER' },
+  ],
+  products: 'ALL_PRODUCTS',
+  product: 'PRODUCT',
+  collection: 'COLLECTION',
+  filter: 'FILTER'
+}
+
+export const RULES = {
+  quantity: 'QUANTITY',
+  unique: 'UNIQUE',
+  amount: 'AMOUNT'
+}
+
+export const DISCOUNTED = {
+  free: 'FREE',
+  percentage: 'PERCENTAGE',
+  fixed_amount: 'FIXED_AMOUNT'
+}
 export const ProductFilterConditions = [
   { label: 'Title',           value: 'title',   operators: [0, 1, 2, 3, 4, 5] },
   { label: 'Type',            value: 'type',    operators: [0, 1, 2, 3, 4, 5] },

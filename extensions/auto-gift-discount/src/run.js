@@ -13,7 +13,27 @@ const EMPTY_DISCOUNT = {
   discountApplicationStrategy: DiscountApplicationStrategy.First,
   discounts: [],
 };
+const CONDITIONS = {
+  any: 'ANY',
+  all: 'ALL'
+}
+const BUYS_TYPES = {
+  products: 'ALL_PRODUCTS',
+  product: 'PRODUCT',
+  collection: 'COLLECTION',
+  filter: 'FILTER'
+}
+const RULES = {
+  quantity: 'QUANTITY',
+  unique: 'UNIQUE',
+  amount: 'AMOUNT'
+}
 
+const DISCOUNTED = {
+  free: 'FREE',
+  percentage: 'PERCENTAGE',
+  fixed_amount: 'FIXED_AMOUNT'
+}
 /**
  * @param {RunInput} input
  * @returns {FunctionRunResult}
@@ -32,11 +52,11 @@ export function run(input) {
 
   // 获取折扣值的函数，根据不同的折扣类型返回相应的折扣
   const getDiscountValue = (condition) => {
-    if (condition.discounted === 'FREE') {
+    if (condition.discounted === DISCOUNTED.free) {
       return { percentage: { value: '100' } }; // 全免折扣
-    } else if (condition.discounted === "PERCENTAGE") {
+    } else if (condition.discounted === DISCOUNTED.percentage) {
       return { percentage: { value: condition.discountedPercentage } }; // 百分比折扣
-    } else if (condition.discounted === "FIXED_AMOUNT") {
+    } else if (condition.discounted === DISCOUNTED.fixed_amount) {
       return { fixedAmount: { amount: condition.discountedEachOff, appliesToEachItem: true } }; // 每件商品固定折扣
     }
     return {};
@@ -78,7 +98,7 @@ export function run(input) {
    * @returns {FunctionRunResult}
    */
   const handleRule = (lines) => {
-    if (rule === 'QUANTITY') {
+    if (rule === RULES.quantity) {
       // 根据筛选结果找到对应的条件
       const totalQuantity = lines.reduce((total, line) => total + line.quantity, 0);
       const condition = findObjectByValue(conditions, totalQuantity);
@@ -86,14 +106,14 @@ export function run(input) {
       return applyDiscount(condition, cartLines); // 应用折扣
     }
 
-    if (rule === 'UNIQUE') {
+    if (rule === RULES.unique) {
       // 根据筛选结果找到对应的条件
       const condition = findObjectByValue(conditions, lines.length);
       if (!condition.quantity) return EMPTY_DISCOUNT; // 如果条件不满足数量要求，返回空折扣
       return applyDiscount(condition, cartLines); // 应用折扣
     }
 
-    if (rule === 'AMOUNT') {
+    if (rule === RULES.amount) {
       // 计算购物车中不包含礼品商品的总金额
       const exceptedGiftsTotalAmount = lines
         .reduce((total, line) => total + Number(line.cost.totalAmount.amount), 0);
@@ -108,22 +128,22 @@ export function run(input) {
   const allGifts = getAllGiftVariants(conditions); // 获取所有礼品的商品变体ID
 
   let lines = [];
-  if (buys.type === 'ALL_PRODUCTS') {
+  if (buys.type === BUYS_TYPES.products) {
     // 筛选出购物车中不包含礼品的商品
     lines = cartLines.filter(line => !allGifts.includes(removeGidStr(line.merchandise.id)));
   }
 
-  if (buys.type === 'PRODUCT') {
+  if (buys.type === BUYS_TYPES.product) {
     const buysIds = buys.value.flatMap(p => p.variants); // 获取买入规则中的商品变体ID
     // 筛选购物车中包含买入规则商品的商品
     lines = cartLines.filter(line => buysIds.includes(removeGidStr(line.merchandise.id)));
   }
-  if (buys.type === 'COLLECTION') {
+  if (buys.type === BUYS_TYPES.collection) {
     // 筛选购物车中不包含礼品且在给定集合中的商品
     lines = cartLines.filter(line => (line.merchandise.product.inAnyCollection && !allGifts.includes(removeGidStr(line.merchandise.id))));
   }
 
-  if (buys.type === 'FILTER') {
+  if (buys.type === BUYS_TYPES.filter) {
     const allGifts = getAllGiftVariants(conditions);
     // 筛选购物车中不包含礼品且符合条件的商品
     lines = filterCartItems(cartLines, allGifts, buys.value)
@@ -205,9 +225,9 @@ function filterCartItems(cartLines, allGifts, filter) {
     });
 
     // 根据 filterType 决定返回值
-    if (filterType === "all_conditions") {
+    if (filterType === CONDITIONS.all) {
       return results.every((result) => result === true);
-    } else if (filterType === "any_conditions") {
+    } else if (filterType === CONDITIONS.any) {
       return results.some((result) => result === true);
     }
 

@@ -9,9 +9,14 @@ generator client {
 // enough when changing adapters.
 // See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
 }
+
+// datasource db {
+//   provider = "mysql"
+//   url      = env("DATABASE_URL")
+// }
 
 model Session {
   id            String    @id
@@ -29,4 +34,14 @@ model Session {
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
+}
+
+model Discount {
+  id         Int       @id @default(autoincrement())
+  title      String    @default("")
+  discountId String    @default("")
+  shop       String    @default("")
+  metafield  String?
+  startsAt   DateTime?
+  endsAt     DateTime?
 }

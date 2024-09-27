@@ -14,7 +14,7 @@ import CurrencySymbol from "./CurrencySymbol.jsx";
 import { DeleteIcon, PlusIcon } from "@shopify/polaris-icons";
 import SelectedTargets from "./SelectedTargets.jsx";
 import { useCallback, useState } from "react";
-import { removeGidStr, resourcePicker } from "../utils.js";
+import {DISCOUNTED, removeGidStr, resourcePicker, RULES} from "../utils.js";
 
 export default function PurchaseCondition({ rule, currencyCode, conditionsData, onChange }) {
   const MAXRULE = 3;
@@ -24,7 +24,7 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
     quantity: undefined,
     amount: undefined,
     products: [],
-    discounted: "FREE",
+    discounted: DISCOUNTED.free,
     discountedPercentage: "",
     discountedEachOff: "",
   });
@@ -85,28 +85,28 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
       <InlineStack gap="400">
         <RadioButton
           label="Free"
-          id={`FREE-${idx}`}
-          value="FREE"
-          checked={condition.discounted === "FREE"}
-          onChange={() => updateConditionValue(idx, "FREE", "discounted")}
+          id={`${DISCOUNTED.free}-${idx}`}
+          value={DISCOUNTED.free}
+          checked={condition.discounted === DISCOUNTED.free}
+          onChange={() => updateConditionValue(idx, DISCOUNTED.free, "discounted")}
         />
         <RadioButton
           label="Percentage"
-          id={`PERCENTAGE-${idx}`}
-          value="PERCENTAGE"
-          checked={condition.discounted === "PERCENTAGE"}
-          onChange={() => updateConditionValue(idx, "PERCENTAGE", "discounted")}
+          id={`${DISCOUNTED.percentage}-${idx}`}
+          value={DISCOUNTED.percentage}
+          checked={condition.discounted === DISCOUNTED.percentage}
+          onChange={() => updateConditionValue(idx, DISCOUNTED.percentage, "discounted")}
         />
         <RadioButton
           label="Fixed amount"
-          id={`FIXED_AMOUNT-${idx}`}
-          value="FIXED_AMOUNT"
-          checked={condition.discounted === "FIXED_AMOUNT"}
-          onChange={() => updateConditionValue(idx, "FIXED_AMOUNT", "discounted")}
+          id={`${DISCOUNTED.fixed_amount}-${idx}`}
+          value={DISCOUNTED.fixed_amount}
+          checked={condition.discounted === DISCOUNTED.fixed_amount}
+          onChange={() => updateConditionValue(idx, DISCOUNTED.fixed_amount, "discounted")}
         />
       </InlineStack>
 
-      {condition.discounted === "PERCENTAGE" && (
+      {condition.discounted === DISCOUNTED.percentage && (
         <Box width="200px" paddingBlockEnd="200">
           <TextField
             label="Percentage"
@@ -119,7 +119,7 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
         </Box>
       )}
 
-      {condition.discounted === "FIXED_AMOUNT" && (
+      {condition.discounted === DISCOUNTED.fixed_amount && (
         <Box width="200px" paddingBlockEnd="200">
           <TextField
             label="Each off"
@@ -142,10 +142,10 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
           <BlockStack gap="400">
             {conditions.map((condition, idx) => (
               <Box key={idx}>
-                <Text variant="headingSm" as="h3">{rule === "AMOUNT" ? "Amount" : "Quantity"} condition</Text>
+                <Text variant="headingSm" as="h3">{rule === RULES.amount ? "Amount" : "Quantity"} condition</Text>
                 <Box paddingBlockEnd="300" paddingBlockStart="200">
                   <InlineGrid columns={conditions.length > 1 ? "2fr auto auto" : "2fr auto"} gap="200">
-                    {(rule === "QUANTITY" || rule === "UNIQUE") && (
+                    {(rule === RULES.quantity || rule === RULES.unique) && (
                       <TextField
                         autoComplete="off"
                         type="number"
@@ -156,7 +156,7 @@ export default function PurchaseCondition({ rule, currencyCode, conditionsData, 
                       />
                     )}
 
-                    {rule === "AMOUNT" && (
+                    {rule === RULES.amount && (
                       <TextField
                         autoComplete="off"
                         type="number"

@@ -11,7 +11,7 @@ import {
   RadioButton,
 } from "@shopify/polaris";
 import SelectedTargets from "../components/SelectedTargets.jsx";
-import { removeGidStr, resourcePicker } from "../utils.js";
+import {BUYS_TYPES, CONDITIONS, removeGidStr, resourcePicker} from "../utils.js";
 import ConditionSelector from "./ConditionSelector.jsx";
 
 export default function CustomerBuys({
@@ -31,7 +31,7 @@ export default function CustomerBuys({
     operator: '',
     value: '',
   });
-  const [filterType, setFilterType] = useState('all_conditions');  // 筛选器的类型
+  const [filterType, setFilterType] = useState(CONDITIONS.all);  // 筛选器的类型
 
   /**
    * 通用的资源选择处理逻辑
@@ -39,7 +39,7 @@ export default function CustomerBuys({
    * @param {string} type - 要选择的资源类型 ('PRODUCT' 或 'COLLECTION')
    */
   const handleSelectResource = async (type) => {
-    const isProductType = type === 'PRODUCT';
+    const isProductType = type === BUYS_TYPES.product;
     const selectedItems = isProductType ? selectedProducts : selectedCollections;  // 根据类型选择合适的状态
     const data = await resourcePicker({ type: type.toLowerCase(), selectionIds: selectedItems });  // 调用资源选择器
 
@@ -65,13 +65,13 @@ export default function CustomerBuys({
 
     // 根据不同的购买类型设置相应的值
     switch (newValue) {
-      case 'PRODUCT':
+      case BUYS_TYPES.product:
         value = selectedProducts;
         break;
-      case 'COLLECTION':
+      case BUYS_TYPES.collection:
         value = selectedCollections;
         break;
-      case 'FILTER':
+      case BUYS_TYPES.filter:
         value = { filterType, conditions: conditionData };
         break;
       default:
@@ -85,12 +85,12 @@ export default function CustomerBuys({
   /**
    * 处理筛选器类型的切换
    * 当用户在条件筛选器中切换条件类型时调用
-   * @param {string} newValue - 筛选器的新类型 ('all_conditions' 或 'any_conditions')
+   * @param {string} newValue - 筛选器的新类型 ('ALL' 或 'ANY')
    */
   const handleFilterTypeChange = useCallback((_, newValue) => {
     setFilterType(newValue);
     // 更新筛选条件，并调用 onChange 通知父组件
-    onChange(formatResource({ filterType: newValue, conditions: conditionData }, 'FILTER'));
+    onChange(formatResource({ filterType: newValue, conditions: conditionData }, BUYS_TYPES.filter));
   }, [conditionData, onChange]);
 
   /**
@@ -101,7 +101,7 @@ export default function CustomerBuys({
   const handleConditionDataChange = useCallback((newData) => {
     setConditionData(newData);
     // 更新条件筛选，并调用 onChange 通知父组件
-    onChange(formatResource({ filterType, conditions: newData }, 'FILTER'));
+    onChange(formatResource({ filterType, conditions: newData }, BUYS_TYPES.filter));
   }, [filterType, onChange]);
 
   /**
@@ -128,23 +128,18 @@ export default function CustomerBuys({
           <Text as="p">Any items from</Text>
           <InlineGrid
             columns="2fr auto"
-            gap={buyType === 'PRODUCT' || buyType === 'COLLECTION' ? '200' : '0'}
+            gap={buyType === BUYS_TYPES.product || buyType === BUYS_TYPES.collection ? '200' : '0'}
           >
             {/* 购买类型选择器 */}
             <Select
               label="Any items from"
               labelHidden
-              options={[
-                { label: 'All products', value: 'ALL_PRODUCTS' },
-                { label: 'Specific products', value: 'PRODUCT' },
-                { label: 'Specific collections', value: 'COLLECTION' },
-                { label: 'Custom product filters', value: 'FILTER' },
-              ]}
+              options={BUYS_TYPES.options}
               onChange={handleTypeChange}  // 处理购买类型切换
               value={buyType}
               name="buyType"
             />
-            {(buyType === 'PRODUCT' || buyType === 'COLLECTION') && (
+            {(buyType === BUYS_TYPES.product || buyType === BUYS_TYPES.collection) && (
               // 产品或集合选择按钮
               <Button onClick={() => handleSelectResource(buyType)}>Browse</Button>
             )}
@@ -152,7 +147,7 @@ export default function CustomerBuys({
         </Box>
 
         {/* 条件筛选器部分 */}
-        {buyType === 'FILTER' && (
+        {buyType === BUYS_TYPES.filter && (
           <>
             <BlockStack gap="100">
               <Text variant="headingSm" as="h3">
@@ -164,16 +159,16 @@ export default function CustomerBuys({
                   {/* 筛选条件选择器 */}
                   <RadioButton
                     label="all conditions"
-                    checked={filterType === 'all_conditions'}
-                    id="all_conditions"
+                    checked={filterType === CONDITIONS.all}
+                    id={CONDITIONS.all}
                     name="filter_type"
                     onChange={handleFilterTypeChange}
                   />
                   <RadioButton
                     label="any conditions"
-                    id="any_conditions"
+                    id={CONDITIONS.any}
                     name="filter_type"
-                    checked={filterType === 'any_conditions'}
+                    checked={filterType === CONDITIONS.any}
                     onChange={handleFilterTypeChange}
                   />
                 </InlineStack>
@@ -193,20 +188,20 @@ export default function CustomerBuys({
         )}
 
         {/* 选择的产品部分 */}
-        {buyType === 'PRODUCT' && (
+        {buyType === BUYS_TYPES.product && (
           <SelectedTargets
             products={selectedProducts}
-            onRemove={(id) => handleRemoveItem(selectedProducts, setSelectedProducts, id, 'PRODUCT')}
-            onEdit={() => handleSelectResource('PRODUCT')}  // 编辑产品
+            onRemove={(id) => handleRemoveItem(selectedProducts, setSelectedProducts, id, BUYS_TYPES.product)}
+            onEdit={() => handleSelectResource(BUYS_TYPES.product)}  // 编辑产品
             currencyCode={currencyCode}
           />
         )}
 
         {/* 选择的集合部分 */}
-        {buyType === 'COLLECTION' && (
+        {buyType === BUYS_TYPES.collection && (
           <SelectedTargets
             collections={selectedCollections}
-            onRemove={(id) => handleRemoveItem(selectedCollections, setSelectedCollections, id, 'COLLECTION')}
+            onRemove={(id) => handleRemoveItem(selectedCollections, setSelectedCollections, id, BUYS_TYPES.collection)}
             currencyCode={currencyCode}
           />
         )}
@@ -222,19 +217,19 @@ export default function CustomerBuys({
  * @param {string} type - 资源类型 ('PRODUCT', 'COLLECTION', 'FILTER')
  * @returns {object} - 格式化后的数据
  */
-function formatResource(resource, type = 'PRODUCT') {
+function formatResource(resource, type = BUYS_TYPES.product) {
   const result = {
     type,
     value: resource,
   };
 
-  if (type === 'PRODUCT') {
+  if (type === BUYS_TYPES.product) {
     // 格式化产品数据，提取产品 ID 和变体 ID
     result.value = resource.map((p) => ({
       productId: removeGidStr(p.id),
       variants: p.variants.map((v) => removeGidStr(v.id)),
     }));
-  } else if (type === 'COLLECTION') {
+  } else if (type === BUYS_TYPES.collection) {
     // 格式化集合数据，提取集合 ID
     result.value = resource.map((c) => removeGidStr(c.id));
   }
