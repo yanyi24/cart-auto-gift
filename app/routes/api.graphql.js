@@ -176,3 +176,47 @@ async function streamToString(stream) {
   result += utf8Decoder.decode(); // flush the last chunk
   return result;
 }
+
+function a{
+  const q1 = `
+  query queryDiscounts {
+  discountNodes(first: 1,
+    query:"status:'ACTIVE' AND combines_with:'PRODUCT_DISCOUNTS' AND combines_with:'SHIPPING_DISCOUNTS' AND combines_with:'ORDER_DISCOUNTS'") {
+    edges {
+      node {
+        id
+        discount {
+          ... on DiscountAutomaticApp {
+            appDiscountType {
+              title
+              targetType
+              app {
+                title
+              }
+            }
+            endsAt
+            title
+            status
+            startsAt
+            endsAt
+            asyncUsageCount
+            discountClass
+            updatedAt
+          }
+        }
+        metafield(key: "amount-configuration", namespace: "$app:auto-gift") {
+          value
+        }
+      }
+    }
+    pageInfo {
+      endCursor
+      hasNextPage
+      hasPreviousPage
+      startCursor
+    }
+  }
+}
+  `;
+
+}
