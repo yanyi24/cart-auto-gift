@@ -177,7 +177,7 @@ async function streamToString(stream) {
   return result;
 }
 
-function a{
+function a(){
   const q1 = `
   query queryDiscounts {
   discountNodes(first: 1,

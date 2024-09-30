@@ -72,6 +72,18 @@ window.addEventListener("cart_changed", e => {
   console.log('Current cart:', currentCart);
 });
 
+function formatCartData(currentCart) {
+  const {items, currency} = currentCart;
+  if (items.length === 0){
+    return {}
+  }
+  const result = [];
+  items.forEach((item) => {
+    const {variant_id, title, quantity, grams, vendor, product_id, handle, product_type, presentment_price} = item;
+    result.push({variant_id, title, quantity, grams, vendor, product_id, handle, product_type, presentment_price, currency});
+  });
+  return result;
+}
 
 async function fetchData(url, data={}) {
   try {
